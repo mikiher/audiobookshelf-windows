@@ -7,10 +7,12 @@
     <Nullable>disable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <Platforms>x64</Platforms>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Octokit" Version="9.0.0" />
+	<PackageReference Include="System.Resources.Extensions" Version="4.6.0" />
   </ItemGroup>
 
   <ItemGroup>
