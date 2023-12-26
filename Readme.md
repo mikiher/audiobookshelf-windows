@@ -3,7 +3,7 @@ Installs and manages the [audiobookshelf](https://github.com/advplyr/audiobooksh
 
 It installs the latest released version of the server itself (pre-packaged as a Windows executable), and a tray app for managing it. 
 The tray app runs in the background, and can be accessed by clicking the Audiobookshelf tray icon 
-(![Audiobookshelf tray icon](Resources/AppIcon.ico)) in the system tray (bottom right corner of the screen).
+(<img src="Resources/AppIcon.ico" width="16" height="16"/>) in the system tray (bottom right corner of the screen).
 
 The tray app lets you:
 - Start/Stop the server
