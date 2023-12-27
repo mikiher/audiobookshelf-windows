@@ -75,6 +75,7 @@ namespace AudiobookshelfTray
                 try
                 {
                     process.Kill();
+                    process.WaitForExit();
                 }
                 catch (Exception e)
                 {
