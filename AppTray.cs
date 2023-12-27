@@ -130,13 +130,10 @@ namespace AudiobookshelfTray
             StartServer();
 
             _openServerMenuItem.Enabled = true;
-            _startServerMenuItem.Enabled = true;
             _serverLogsMenuItem.Enabled = true;
 
             // listen to wm_close
             System.Windows.Forms.Application.ApplicationExit += ApplicationExited;
-            
-
         }
 
 
