@@ -117,7 +117,8 @@ namespace AudiobookshelfTray
                 Text = "AudiobookshelfTray",
                 ShowInTaskbar = false,
                 WindowState = FormWindowState.Minimized,
-                FormBorderStyle = FormBorderStyle.FixedToolWindow
+                FormBorderStyle = FormBorderStyle.FixedToolWindow,
+                Opacity = 0
             };
             
 
