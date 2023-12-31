@@ -23,7 +23,7 @@ namespace AudiobookshelfTray
     {
         private readonly string _appName = "Audiobookshelf";
         private readonly string _serverPort = "13378";
-        private readonly string _serverFilename = "server.exe";
+        private readonly string _serverFilename = "audiobookshelf.exe";
         private readonly string _serverDataDir;
         private readonly string _serverBinDir;
         private readonly string _serverBinPath;
