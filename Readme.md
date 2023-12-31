@@ -14,11 +14,6 @@ The tray app lets you:
 - Change the server port and other settings (upcoming)
 
 
-The tray app was developed in C# using .NET Framework 4.6.1 and Winforms, in Visual Studio 2022 Community Edition. 
-It was based on the [audiobookshelf-win](https://github.com/advplyr/audiobookshelf-win) codebase by [advplyr](https://github.com/advplyr).
-
-The installer was developed using [NSIS](https://nsis.sourceforge.io/Main_Page).
-
 ## System Requirements
 - Windows 10 64-bit or later
 
@@ -29,3 +24,9 @@ You **do not** need to install Node.js, as the server executable is pre-packaged
 ## Installation
 Download the latest installer release from the [releases page]() and run it.
 
+## Development
+The tray app was developed in C# using .NET Framework 4.6.1 and Winforms, in Visual Studio 2022 Community Edition for UI design, 
+and Visual Studio Code and .Net 8 SDK for non-UI code.
+It was based on the [audiobookshelf-win](https://github.com/advplyr/audiobookshelf-win) codebase by [advplyr](https://github.com/advplyr).
+
+The installer was developed using [Inno Setup](https://jrsoftware.org/isinfo.php) in Visual Studio Code, using the [Inno Setup extension](https://marketplace.visualstudio.com/items?itemName=Chouzz.vscode-innosetup).
