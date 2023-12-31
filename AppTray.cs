@@ -82,7 +82,7 @@ namespace AudiobookshelfTray
             _serverDataDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir",
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName)) as string;
             _serverBinDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "InstallDir",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), _appName)) as string;
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", _appName)) as string;
 
 
             // Create data path directory if does not exist
