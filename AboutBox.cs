@@ -1,11 +1,5 @@
 ﻿using AudiobookshelfTray.Properties;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Linq;
-using System.Reflection;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace AudiobookshelfTray
@@ -30,7 +24,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return String.Format("{0}\nSelf-hosted audiobook and podcast server", Settings.Default.ServerName);
+                return string.Format("{0}\nSelf-hosted audiobook and podcast server", Settings.Default.ServerName);
             }
         }
 
