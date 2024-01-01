@@ -6,12 +6,12 @@ The tray app runs in the background, and can be accessed by clicking the Audiobo
 (<img src="Resources/AppIcon.ico" width="16" height="16"/>) in the system tray (bottom right corner of the screen).
 
 The tray app lets you:
+- Open the server in your default browser
 - Start/Stop the server
 - Set the server to start on login
 - View the server logs
-- Open the server in your default browser
+- Change the server port and other settings
 - Check for updates (upcoming)
-- Change the server port and other settings (upcoming)
 
 
 ## System Requirements
@@ -32,18 +32,18 @@ It was based on the [audiobookshelf-win](https://github.com/advplyr/audiobookshe
 
 The installer was developed using [Inno Setup](https://jrsoftware.org/isinfo.php).
 
-### Building the Audiobookshelf server executable
+### 1. Building the Audiobookshelf server executable
 - Install [Node.js 16](https://nodejs.org/en/download/) (Must be version 16). 
     - Optional: install [nvm-windows](https://github.com/coreybutler/nvm-windows#installation--upgrades) to manage multiple Node.js versions.
 - Install Visual Studio Code
-- Clone the [audiobookshelf](https://github.com/advplyr/audiobookshelf.git) Git repository
+- Clone the [audiobookshelf](https://github.com/advplyr/audiobookshelf.git) Github repository
 - Open the `audiobookshelf` folder in Visual Studio Code
 - Open the terminal (Ctrl+Shift+`)
 - Run `npm ci` to install the dependencies
 - Run `npm i pkg -g` to install the pkg (Node.js to executable) package
 - Run `npm run build-win` to build the audiobookshelf server executable (it will be placed in the `dist\win` folder)
 
-### Building the Audiobookshelf tray app
+### 2. Building the Audiobookshelf tray app
 
 The tray can be built using either Visual Studio 2022 or Visual Studio Code.
 - If you need to make design changes to the UI, it's recommended to use Visual Studio 2022, as it has a visual designer for Winforms.
@@ -65,13 +65,20 @@ The tray can be built using either Visual Studio 2022 or Visual Studio Code.
 - Open the terminal (Ctrl+Shift+`)
 - Run `dotnet build -c Release` or `dotnet build` or to build the solution (you will find the executable in the `bin\x64\Release\net461` or `bin\x64\Debug\net461` folder, depending on the build configuration)
 
-### Building the installer
+#### Running the tray app
+You can run or debug the tray app directly from Visual Studio 2022 or Visual Studio Code.
+- Copy the audiobookshelf server executable to the `bin\x64\Release\net461` or `bin\x64\Debug\net461` folder, depending on the build configuration.
+- Run or debug the app (F5). By default, the app will: 
+    - run the server on port 13378
+    - Will use `%LocalAppData%\Audiobookshelf` as the server data folder.
+
+### 3. Building the installer
 - Install [Visual Studio Code](https://code.visualstudio.com/download)
 - Install [Inno Setup](https://jrsoftware.org/isinfo.php)
 - Install the [Inno Setup extension](https://marketplace.visualstudio.com/items?itemName=Chouzz.vscode-innosetup) for Visual Studio Code
 - Clone [this repository](https://github.com/mikiher/audiobookshelf-windows.git)
 - Open `Setup\installer.iss` in Visual Studio Code
-- Change `#define MyAppBinDir` to the folder where the Audiobookshelf tray app executable is located
+- Change `#define MyAppBinDir` to the folder where the Audiobookshelf tray app executable and dlls are located
 - Change `#define ServerBinDir` to the folder where the Audiobookshelf server executable is located
 - Run the `Build Installer` task (Ctrl+Shift+B) to build the installer (you will find it in the `Setup\Output` folder)
 
