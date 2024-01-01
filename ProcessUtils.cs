@@ -47,17 +47,18 @@ namespace AudiobookshelfTray
             {
                 SetConsoleCtrlHandler(null, true);
                 bool ctrlCSent = GenerateConsoleCtrlEvent(CtrlTypes.CTRL_C_EVENT, 0);
-                if (ctrlCSent) {
+                if (ctrlCSent)
+                {
                     Debug.WriteLine("Sent Ctrl+C to process. Waiting for it to exit");
                     try
                     {
-                        if (process.WaitForExit(5000))
+                        if (process.WaitForExit(8000))
                         {
                             Debug.WriteLine("Process exited");
                         }
                         else
                         {
-                            Debug.WriteLine("Process did not exit within 5 seconds");
+                            Debug.WriteLine("Process did not exit within 8 seconds");
                         }
                     }
                     catch (Exception e)
