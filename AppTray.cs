@@ -1,14 +1,11 @@
-﻿using System;
-using System.Diagnostics;
-using System.Windows.Forms;
-using AudiobookshelfTray.Properties;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Octokit;
-using System.Collections.Generic;
+﻿using AudiobookshelfTray.Properties;
 using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Windows.Forms;
 
 namespace AudiobookshelfTray
 {
@@ -22,15 +19,11 @@ namespace AudiobookshelfTray
     public class AppTray : ApplicationContext
     {
         private readonly string _appName = "Audiobookshelf";
-        private readonly string _serverPort = "13378";
         private readonly string _serverFilename = "audiobookshelf.exe";
-        private readonly string _serverDataDir;
-        private readonly string _serverBinDir;
-        private readonly string _serverBinPath;
 
         private Process _serverProcess = null;
         private ServerLogs _serverLogsForm = null;
-
+        private bool _shouldExit = false;
         private readonly NotifyIcon _trayIcon;
         private readonly ToolStripMenuItem _stopServerMenuItem;
         private readonly ToolStripMenuItem _startServerMenuItem;
@@ -38,6 +31,7 @@ namespace AudiobookshelfTray
         private readonly ToolStripMenuItem _serverLogsMenuItem;
         private readonly ToolStripMenuItem _aboutMenuItem;
         private readonly ToolStripMenuItem _startAtLoginCheckboxMenuItem;
+        private readonly ToolStripMenuItem _settingsMenuItem;
 
         private readonly List<string> _serverLogsList = [];
 
@@ -45,13 +39,14 @@ namespace AudiobookshelfTray
         {
             _stopServerMenuItem = new ToolStripMenuItem("Stop Server", null, StopServerClicked) { Enabled = false };
             _startServerMenuItem = new ToolStripMenuItem("Start Server", null, StartServerClicked) { Enabled = false };
-            _serverLogsMenuItem = new ToolStripMenuItem("Server Logs", null, ShowServerLogsClicked) { Enabled = false};
+            _serverLogsMenuItem = new ToolStripMenuItem("Server Logs", null, ShowServerLogsClicked) { Enabled = false };
             _openServerMenuItem = new ToolStripMenuItem("Open Audiobookshelf...", null, OpenClicked) { Enabled = false };
             _openServerMenuItem.Font = new Font(_openServerMenuItem.Font.Name, _openServerMenuItem.Font.Size, System.Drawing.FontStyle.Bold);
             _aboutMenuItem = new ToolStripMenuItem("About Audiobookshelf Server", null, AboutClicked);
             _startAtLoginCheckboxMenuItem = new ToolStripMenuItem("Start Audiobookshelf at Login") { CheckOnClick = true };
             _startAtLoginCheckboxMenuItem.CheckedChanged += StartAtLoginCheckedChanged;
-            _startAtLoginCheckboxMenuItem.Checked = Settings.Default.StartAtLogin;
+            _startAtLoginCheckboxMenuItem.Checked = Properties.Settings.Default.StartAtLogin;
+            _settingsMenuItem = new ToolStripMenuItem("Settings", null, SettingsClicked);
 
             _trayIcon = new NotifyIcon()
             {
@@ -61,6 +56,7 @@ namespace AudiobookshelfTray
                     Items = {
                         _openServerMenuItem,
                         _startAtLoginCheckboxMenuItem,
+                        _settingsMenuItem,
                         new ToolStripSeparator(),
                         _stopServerMenuItem,
                         _startServerMenuItem,
@@ -70,47 +66,33 @@ namespace AudiobookshelfTray
                         new ToolStripSeparator(),
                         new ToolStripMenuItem("Exit", null, ExitClicked)
                     },
-                    Font = new Font("Segoe UI", 8.25f, System.Drawing.FontStyle.Regular)
+                    //Font = new Font("Segoe UI", 8.25f, System.Drawing.FontStyle.Regular)
                 },
                 Visible = true,
                 Text = _appName
             };
 
-            _trayIcon.DoubleClick += OpenClicked;
-            _trayIcon.BalloonTipClicked += BalloonTipClicked;
-
-            _serverDataDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName)) as string;
-            _serverBinDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "InstallDir",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", _appName)) as string;
-
-
-            // Create data path directory if does not exist
-            if (!Directory.Exists(_serverDataDir))
+            // Check if we need to upgrade settings from previous version
+            if (Settings.Default.UpgradeRequired)
             {
-                Debug.WriteLine("Creating data path at " + _serverDataDir);
-                try
-                {
-                    Directory.CreateDirectory(_serverDataDir);
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine(e.ToString());
-                    MessageBox.Show("Failed to create data path at " + _serverDataDir, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-            }
-            else
-            {
-                Debug.WriteLine("Abs data path already exists");
+                Settings.Default.Upgrade();
+                Settings.Default.UpgradeRequired = false;
+                Settings.Default.Save();
             }
 
-            _serverBinPath = Path.Combine(_serverBinDir, _serverFilename);
+            string serverDataDir = string.IsNullOrEmpty(Settings.Default.DataDir) ?
+                Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir",
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName)) as string :
+                Settings.Default.DataDir;
+            if (serverDataDir != Settings.Default.DataDir)
+            {
+                Settings.Default.DataDir = serverDataDir;
+                Settings.Default.Save();
+            }
 
-            Debug.WriteLine("Server data dir: " + _serverDataDir);
-            Debug.WriteLine("Server binary dir: " + _serverBinDir);
+            //_serverBinDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "InstallDir",
+            //    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", _appName)) as string;
 
-            
             // Create a hidden window to handle WM_CLOSE messages
             MainForm = new Form
             {
@@ -118,20 +100,29 @@ namespace AudiobookshelfTray
                 ShowInTaskbar = false,
                 WindowState = FormWindowState.Minimized,
                 FormBorderStyle = FormBorderStyle.FixedToolWindow,
-                Opacity = 0
+                Opacity = 0,
             };
-            
+            MainForm.Load += (sender, e) => { if (_shouldExit) System.Windows.Forms.Application.Exit(); };
 
             Init();
         }
 
+        private void SettingsClicked(object sender, EventArgs e)
+        {
+            SettingsDialog settingsDialog = new(this);
+            settingsDialog.ShowDialog();
+        }
+
         private void Init()
-        {          
+        {
             // Start server
-            StartServer();
+            if (!StartServer())
+                _shouldExit = true;
 
             _openServerMenuItem.Enabled = true;
             _serverLogsMenuItem.Enabled = true;
+            _trayIcon.DoubleClick += OpenClicked;
+            _trayIcon.BalloonTipClicked += BalloonTipClicked;
 
             // listen to wm_close
             System.Windows.Forms.Application.ApplicationExit += ApplicationExited;
@@ -145,15 +136,15 @@ namespace AudiobookshelfTray
             {
                 Debug.WriteLine("Adding to startup");
                 rk.SetValue("Audiobookshelf", System.Windows.Forms.Application.ExecutablePath);
-                Settings.Default.StartAtLogin = true;
+                Properties.Settings.Default.StartAtLogin = true;
             }
             else
             {
                 Debug.WriteLine("Removing from startup");
                 rk.DeleteValue("Audiobookshelf", false);
-                Settings.Default.StartAtLogin = false;
+                Properties.Settings.Default.StartAtLogin = false;
             }
-            Settings.Default.Save();
+            Properties.Settings.Default.Save();
         }
 
         private void AboutClicked(object sender, EventArgs e)
@@ -192,7 +183,7 @@ namespace AudiobookshelfTray
                 // just open the browser.
                 OpenBrowser();
             }
-            
+
             // Server not started, 
             else
             {
@@ -226,24 +217,62 @@ namespace AudiobookshelfTray
             }
         }
 
-        private void StartServer()
+        private bool StartServer()
         {
             if (_serverProcess != null)
             {
                 Debug.WriteLine("Server already started");
-                return;
+                return false;
             }
-            Debug.WriteLine("Starting service");
 
-            string configPath = Path.Combine(_serverDataDir, "config");
-            string metadataPath = Path.Combine(_serverDataDir, "metadata");
+            string serverBinDir = System.Windows.Forms.Application.StartupPath;
+            Debug.WriteLine("Server binary dir: " + serverBinDir);
+            string serverBinPath = Path.Combine(serverBinDir, _serverFilename);
+            Debug.WriteLine("Server binary path: " + serverBinPath);
+
+            // Check if server binary exists
+            if (!File.Exists(serverBinPath))
+            {
+                Debug.WriteLine("Server binary not found at " + serverBinPath);
+                MessageBox.Show("Server binary not found at " + serverBinPath, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            string serverDataDir = Settings.Default.DataDir;
+            Debug.WriteLine("Server data dir: " + serverBinDir);
+            // Create data path directory if does not exist
+            if (!Directory.Exists(serverDataDir))
+            {
+                Debug.WriteLine("Creating data path at " + serverDataDir);
+                try
+                {
+                    Directory.CreateDirectory(serverDataDir);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                    MessageBox.Show("Failed to create data path at " + serverDataDir, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Abs data path already exists");
+            }
+
+            string configPath = Path.Combine(serverDataDir, "config");
+            string metadataPath = Path.Combine(serverDataDir, "metadata");
+
+            string serverPort = Settings.Default.ServerPort;
+
+            Debug.WriteLine("Starting service");
 
             _serverProcess = new Process
             {
                 StartInfo = new ProcessStartInfo()
                 {
-                    Arguments = " -p " + _serverPort + " --config " + configPath + " --metadata " + metadataPath + " --source windows",
-                    FileName = _serverBinPath,
+                    Arguments = " -p " + serverPort + " --config " + configPath + " --metadata " + metadataPath + " --source windows",
+                    FileName = serverBinPath,
                     WindowStyle = ProcessWindowStyle.Hidden,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -263,7 +292,7 @@ namespace AudiobookshelfTray
 
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
-                
+
 
             // Show an alert that we started the server.
             _trayIcon.ShowBalloonTip(500, "Audiobookshelf", "Server started", ToolTipIcon.Info);
@@ -271,12 +300,14 @@ namespace AudiobookshelfTray
             // Fix up the context menu stuff
             _startServerMenuItem.Enabled = false;
             _stopServerMenuItem.Enabled = true;
+
+            return true;
         }
 
         private void ServerExited(object sender, EventArgs e)
         {
             // check if this is happening in the UI thread
-            if(_trayIcon.ContextMenuStrip.InvokeRequired)
+            if (_trayIcon.ContextMenuStrip.InvokeRequired)
             {
                 _trayIcon.ContextMenuStrip.Invoke(new MethodInvoker(delegate
                 {
@@ -285,11 +316,15 @@ namespace AudiobookshelfTray
                 return;
             }
 
+            Process process = sender as Process;
+
+            Debug.WriteLine("sender exit code: " + process.ExitCode);
+
             // check if server exited with error
-            if (_serverProcess.ExitCode != 0)
+            if (process.ExitCode != 0)
             {
-                Debug.WriteLine("Server exited with error code " + _serverProcess.ExitCode);
-                _trayIcon.ShowBalloonTip(500, "Audiobookshelf", "Server exited with error code " + _serverProcess.ExitCode, ToolTipIcon.Error);
+                Debug.WriteLine("Server exited with error code " + process.ExitCode);
+                _trayIcon.ShowBalloonTip(500, "Audiobookshelf", "Server exited with error code " + process.ExitCode, ToolTipIcon.Error);
             }
             else
             {
@@ -299,14 +334,13 @@ namespace AudiobookshelfTray
             // Fix up the context menu stuff
             _startServerMenuItem.Enabled = true;
             _stopServerMenuItem.Enabled = false;
-            _serverProcess = null;
         }
 
         private void OpenBrowser()
         {
             if (_serverProcess == null) return;
 
-            System.Diagnostics.Process.Start("http://localhost:" + _serverPort);
+            System.Diagnostics.Process.Start("http://localhost:" + Settings.Default.ServerPort);
         }
 
         // Why??
@@ -316,15 +350,15 @@ namespace AudiobookshelfTray
             {
                 return;
             }
-            
+
             if (outLine.Data.Contains("[Server] Init"))
             {
                 // Extract server version from init log line
                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(outLine.Data, @"v\d+\.\d+\.\d+$");
                 if (match.Success)
                 {
-                    Settings.Default.ServerVersion = match.Value;
-                    Settings.Default.Save();
+                    Properties.Settings.Default.ServerVersion = match.Value;
+                    Properties.Settings.Default.Save();
                 }
                 else
                 {
