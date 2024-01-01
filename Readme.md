@@ -46,8 +46,9 @@ The installer was developed using [Inno Setup](https://jrsoftware.org/isinfo.php
 ### Building the Audiobookshelf tray app
 
 The tray can be built using either Visual Studio 2022 or Visual Studio Code.
-If you need to make design changes to the UI, It is recommended to use Visual Studio 2022, as it has a visual designer for Winforms.
-If you only need to make code changes, you can use Visual Studio Code.
+- If you need to make design changes to the UI, it's recommended to use Visual Studio 2022, as it has a visual designer for Winforms.
+- It's convenient to use Visual Studio 2022 since it has a built-in debug console, in which you can see Debeug.WriteLine() messages.
+- If you only need to make code changes, you can use Visual Studio Code.
 
 #### On Visual Studio 2022
 - Install [Visual Studio 2022 Community Edition](https://visualstudio.microsoft.com/downloads/)
@@ -61,16 +62,15 @@ If you only need to make code changes, you can use Visual Studio Code.
 - Install the [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit)
 - Install the latest [.NET SDK](https://dotnet.microsoft.com/en-us/download)
 - Clone [this repository](https://github.com/mikiher/audiobookshelf-windows.git)
-- Open the `Audiobookshelf.sln` solution file in Visual Studio Code
 - Open the terminal (Ctrl+Shift+`)
 - Run `dotnet build -c Release` or `dotnet build` or to build the solution (you will find the executable in the `bin\x64\Release\net461` or `bin\x64\Debug\net461` folder, depending on the build configuration)
 
 ### Building the installer
 - Install [Visual Studio Code](https://code.visualstudio.com/download)
 - Install [Inno Setup](https://jrsoftware.org/isinfo.php)
-- Install the [Inno Setup](https://marketplace.visualstudio.com/items?itemName=Chouzz.vscode-innosetup) extension for Visual Studio Code
+- Install the [Inno Setup extension](https://marketplace.visualstudio.com/items?itemName=Chouzz.vscode-innosetup) for Visual Studio Code
 - Clone [this repository](https://github.com/mikiher/audiobookshelf-windows.git)
-- Open the `Setup\installer.iss` file in Visual Studio Code
+- Open `Setup\installer.iss` in Visual Studio Code
 - Change `#define MyAppBinDir` to the folder where the Audiobookshelf tray app executable is located
 - Change `#define ServerBinDir` to the folder where the Audiobookshelf server executable is located
 - Run the `Build Installer` task (Ctrl+Shift+B) to build the installer (you will find it in the `Setup\Output` folder)
