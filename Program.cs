@@ -4,10 +4,10 @@ using System.Windows.Forms;
 
 namespace AudiobookshelfTray
 {
-   internal static class Program
+    internal static class Program
     {
         static readonly Mutex _mutex = new(true, "AudiobookshelfTray");
- 
+
         [STAThread]
         static void Main()
         {
@@ -15,11 +15,13 @@ namespace AudiobookshelfTray
             SetProcessDPIAware();
             if (_mutex.WaitOne(TimeSpan.Zero, true))
             {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new AppTray());
                 _mutex.ReleaseMutex();
             }
             else
-            { 
+            {
                 MessageBox.Show("AudiobookshelfTray is already running.\nCheck the system tray", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
