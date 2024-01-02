@@ -80,16 +80,6 @@ namespace AudiobookshelfTray
                 Settings.Default.Save();
             }
 
-            string serverDataDir = string.IsNullOrEmpty(Settings.Default.DataDir) ?
-                Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir",
-                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName)) as string :
-                Settings.Default.DataDir;
-            if (serverDataDir != Settings.Default.DataDir)
-            {
-                Settings.Default.DataDir = serverDataDir;
-                Settings.Default.Save();
-            }
-
             //_serverBinDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "InstallDir",
             //    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", _appName)) as string;
 
@@ -102,9 +92,39 @@ namespace AudiobookshelfTray
                 FormBorderStyle = FormBorderStyle.FixedToolWindow,
                 Opacity = 0,
             };
-            MainForm.Load += (sender, e) => { if (_shouldExit) System.Windows.Forms.Application.Exit(); };
+            MainForm.Load += (sender, e) => { if (_shouldExit) ExitClicked(sender, e); };
 
             Init();
+        }
+
+        private string GetServerDataDir()
+        {
+            string serverDataDir = Settings.Default.DataDir;
+            if (string.IsNullOrEmpty(serverDataDir))
+            {
+                string defaultDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName);
+                RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Audiobookshelf");
+                serverDataDir = key != null ? key.GetValue("DataDir", defaultDataDir) as string : defaultDataDir;
+            }
+            if (!Directory.Exists(serverDataDir))
+            {
+                try
+                {
+                    Directory.CreateDirectory(serverDataDir);
+                }
+                catch (Exception e)
+                {
+                    Debug.WriteLine(e.ToString());
+                    MessageBox.Show("Failed to create server data directory at " + serverDataDir, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return null;
+                }
+            }
+            if (serverDataDir != Settings.Default.DataDir)
+            {
+                Settings.Default.DataDir = serverDataDir;
+                Settings.Default.Save();
+            }
+            return serverDataDir;
         }
 
         private void SettingsClicked(object sender, EventArgs e)
@@ -124,7 +144,6 @@ namespace AudiobookshelfTray
             _trayIcon.DoubleClick += OpenClicked;
             _trayIcon.BalloonTipClicked += BalloonTipClicked;
 
-            // listen to wm_close
             System.Windows.Forms.Application.ApplicationExit += ApplicationExited;
         }
 
@@ -155,13 +174,13 @@ namespace AudiobookshelfTray
 
         private void ApplicationExited(object sender, EventArgs e)
         {
-            Debug.WriteLine("About to exit. Stopping server");
+            Debug.WriteLine("About to exit...");
             StopServer();
-            _trayIcon.Visible = false;
         }
 
         public void ExitClicked(object sender, EventArgs e)
         {
+            _trayIcon.Visible = false;
             System.Windows.Forms.Application.Exit();
         }
 
@@ -212,8 +231,10 @@ namespace AudiobookshelfTray
         {
             if (_serverProcess != null)
             {
+                Debug.WriteLine("Stopping server...");
                 ProcessUtils.StopProcess(_serverProcess);
                 _serverProcess = null;
+                Debug.WriteLine("Server stopped");
             }
         }
 
@@ -238,27 +259,9 @@ namespace AudiobookshelfTray
                 return false;
             }
 
-            string serverDataDir = Settings.Default.DataDir;
-            Debug.WriteLine("Server data dir: " + serverBinDir);
-            // Create data path directory if does not exist
-            if (!Directory.Exists(serverDataDir))
-            {
-                Debug.WriteLine("Creating data path at " + serverDataDir);
-                try
-                {
-                    Directory.CreateDirectory(serverDataDir);
-                }
-                catch (Exception e)
-                {
-                    Debug.WriteLine(e.ToString());
-                    MessageBox.Show("Failed to create data path at " + serverDataDir, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return false;
-                }
-            }
-            else
-            {
-                Debug.WriteLine("Abs data path already exists");
-            }
+            string serverDataDir = GetServerDataDir();
+            if (serverDataDir == null)
+                return false;
 
             string configPath = Path.Combine(serverDataDir, "config");
             string metadataPath = Path.Combine(serverDataDir, "metadata");

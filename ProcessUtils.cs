@@ -52,18 +52,14 @@ namespace AudiobookshelfTray
                     Debug.WriteLine("Sent Ctrl+C to process. Waiting for it to exit");
                     try
                     {
-                        if (process.WaitForExit(8000))
-                        {
-                            Debug.WriteLine("Process exited");
-                        }
-                        else
+                        if (!process.WaitForExit(8000))
                         {
                             Debug.WriteLine("Process did not exit within 8 seconds");
                         }
                     }
                     catch (Exception e)
                     {
-                        Debug.WriteLine($"Exception thrown by WaitForExit: {e}");
+                        Debug.WriteLine($"Exception thrown by Process.WaitForExit: {e}");
                     }
                 }
                 SetConsoleCtrlHandler(null, false);
@@ -80,7 +76,7 @@ namespace AudiobookshelfTray
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine($"Exception thrown by Kill: {e}");
+                    Debug.WriteLine($"Exception thrown by Process.Kill: {e}");
                 }
             }
         }
