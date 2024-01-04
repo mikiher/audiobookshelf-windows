@@ -27,11 +27,6 @@ Download the latest installer release from the [release page](https://github.com
 ## Caveats
 - The server currently uses [tone](https://github.com/sandreas/tone) to embed metadata and covers in audio files.
 `tone` is slated to be replaced soon, so it is not included in the Windows installer release
-- The server also depends on [ffmpeg](https://ffmpeg.org/) and ffprobe. 
-There is a [pending server PR](https://github.com/advplyr/audiobookshelf/pull/2391) to install them automatically, but it hasn't been merged yet.
-Until then, you will need to install them manually.
-- As mentiond in issue [#1](https://github.com/mikiher/audiobookshelf-windows/issues/1), Using "Browse for folder" to select content folders for libraries doesn't work.
-You will need to manually type (or copy-paste) the full path to the folder.
 
 ## Development
 All development was done on a Windows 10 64-bit desktop.
