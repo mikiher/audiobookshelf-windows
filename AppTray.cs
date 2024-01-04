@@ -200,6 +200,7 @@ namespace AudiobookshelfTray
                 {
                     StartInfo = new ProcessStartInfo()
                     {
+                        Arguments = "/SILENT",
                         FileName = _installerPath,
                         WindowStyle = ProcessWindowStyle.Hidden,
                         CreateNoWindow = true,
