@@ -4,6 +4,7 @@ on:
   release:
     types: [published]
     repository: advplyr/audiobookshelf
+  workflow_dispatch:
 
 jobs:
   build-windows:
