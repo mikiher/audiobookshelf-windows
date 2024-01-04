@@ -5,7 +5,7 @@
 #define ServerBinDir "..\..\audiobookshelf\dist\win"
 
 #define MyAppName "Audiobookshelf"
-#define MyAppVersion "2.7.0"
+#define MyAppVersion "2.7.1"
 #define MyAppPublisher "Audiobookshelf"
 #define MyAppURL "https://www.audiobookshelf.org/"
 #define MyAppExeName "AudiobookshelfTray.exe"
