@@ -1,4 +1,4 @@
-name: Build Windows App on Release
+name: Build Windows installer on Release of audiobookshelf
 
 on:
   release:
@@ -11,6 +11,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # 1. Build the audiobookshelf executable
       - uses: actions/checkout@v3
         with:
           repository: advplyr/audiobookshelf
@@ -29,6 +30,15 @@ jobs:
       - name: Install pkg globally
         run: npm install -g pkg
 
-      - name: Build Windows app
+      - name: Build windows executable
         run: npm run build-win
         working-directory: ./audiobookshelf
+
+      # 2. Build the tray app
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+
+      - name: Build solution
+        run: dotnet build -c Release
