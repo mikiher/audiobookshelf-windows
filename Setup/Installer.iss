@@ -53,7 +53,7 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall
 
 [Registry]
 ; Don't delete datadir in HKCU during uninstall - we want to keep the data dir if the user reinstalls
@@ -127,7 +127,7 @@ var
 begin
     DataDirPage := CreateInputDirPage(wpSelectDir, 'Select Data Directory', 'Where should Audiobookshelf store its data?', 'Select the directory in which Audiobookshelf should store its data, then click Next.', False, '');
     DataDirPage.Add('');
-    DataDirPage.Values[0] := ExpandConstant('{userappdata}\Audiobookshelf');
+    DataDirPage.Values[0] := ExpandConstant('{localappdata}\Audiobookshelf');
     if RegQueryStringValue(HKCU, 'Software\Audiobookshelf', 'DataDir', DataDir) then
     begin
         DataDirPage.Values[0] := DataDir;
