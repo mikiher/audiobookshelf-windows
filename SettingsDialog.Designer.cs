@@ -159,7 +159,6 @@
             this.textBoxPort.TabIndex = 1;
             this.textBoxPort.TextChanged += new System.EventHandler(this.PortTextChanged);
             this.textBoxPort.Validating += new System.ComponentModel.CancelEventHandler(this.PortValidating);
-            this.textBoxPort.Validated += new System.EventHandler(this.PortValidated);
             // 
             // buttonCancel
             // 

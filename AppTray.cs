@@ -1,29 +1,30 @@
 ﻿using AudiobookshelfTray.Properties;
 using Microsoft.Win32;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace AudiobookshelfTray
 {
-    class ReleaseCliAsset
-    {
-        public string Tag { get; set; }
-        public string DownloadUrl { get; set; }
-        public string Url { get; set; }
-    }
-
     public class AppTray : ApplicationContext
     {
         private readonly string _appName = "Audiobookshelf";
         private readonly string _serverFilename = "audiobookshelf.exe";
+        private readonly string _trayAppName = "AudiobookshelfTray";
+        private readonly string _repoOwner = "mikiher";
+        private readonly string _repoName = "audiobookshelf-windows";
 
         private Process _serverProcess = null;
         private ServerLogs _serverLogsForm = null;
         private bool _shouldExit = false;
+        private bool _runInstall = false;
+        private string _installerPath;
         private readonly NotifyIcon _trayIcon;
         private readonly ToolStripMenuItem _stopServerMenuItem;
         private readonly ToolStripMenuItem _startServerMenuItem;
@@ -32,6 +33,7 @@ namespace AudiobookshelfTray
         private readonly ToolStripMenuItem _aboutMenuItem;
         private readonly ToolStripMenuItem _startAtLoginCheckboxMenuItem;
         private readonly ToolStripMenuItem _settingsMenuItem;
+        private readonly ToolStripMenuItem _checkForUpdatesMenuItem;
 
         private readonly List<string> _serverLogsList = [];
 
@@ -41,12 +43,13 @@ namespace AudiobookshelfTray
             _startServerMenuItem = new ToolStripMenuItem("Start Server", null, StartServerClicked) { Enabled = false };
             _serverLogsMenuItem = new ToolStripMenuItem("Server Logs", null, ShowServerLogsClicked) { Enabled = false };
             _openServerMenuItem = new ToolStripMenuItem("Open Audiobookshelf...", null, OpenClicked) { Enabled = false };
-            _openServerMenuItem.Font = new Font(_openServerMenuItem.Font.Name, _openServerMenuItem.Font.Size, System.Drawing.FontStyle.Bold);
+            _openServerMenuItem.Font = new Font(_openServerMenuItem.Font.Name, _openServerMenuItem.Font.Size, FontStyle.Bold);
             _aboutMenuItem = new ToolStripMenuItem("About Audiobookshelf Server", null, AboutClicked);
             _startAtLoginCheckboxMenuItem = new ToolStripMenuItem("Start Audiobookshelf at Login") { CheckOnClick = true };
             _startAtLoginCheckboxMenuItem.CheckedChanged += StartAtLoginCheckedChanged;
-            _startAtLoginCheckboxMenuItem.Checked = Properties.Settings.Default.StartAtLogin;
+            _startAtLoginCheckboxMenuItem.Checked = Settings.Default.StartAtLogin;
             _settingsMenuItem = new ToolStripMenuItem("Settings", null, SettingsClicked);
+            _checkForUpdatesMenuItem = new ToolStripMenuItem("Check for Updates", null, CheckForUpdates);
 
             _trayIcon = new NotifyIcon()
             {
@@ -63,6 +66,7 @@ namespace AudiobookshelfTray
                         _serverLogsMenuItem,
                         new ToolStripSeparator(),
                         _aboutMenuItem,
+                        _checkForUpdatesMenuItem,
                         new ToolStripSeparator(),
                         new ToolStripMenuItem("Exit", null, ExitClicked)
                     },
@@ -86,7 +90,7 @@ namespace AudiobookshelfTray
             // Create a hidden window to handle WM_CLOSE messages
             MainForm = new Form
             {
-                Text = "AudiobookshelfTray",
+                Text = _trayAppName,
                 ShowInTaskbar = false,
                 WindowState = FormWindowState.Minimized,
                 FormBorderStyle = FormBorderStyle.FixedToolWindow,
@@ -97,14 +101,14 @@ namespace AudiobookshelfTray
             Init();
         }
 
-        private string GetServerDataDir()
+        public string GetServerDataDir()
         {
             string serverDataDir = Settings.Default.DataDir;
+            string registryServerDataDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir", null) as string;
             if (string.IsNullOrEmpty(serverDataDir))
             {
                 string defaultDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName);
-                RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Audiobookshelf");
-                serverDataDir = key != null ? key.GetValue("DataDir", defaultDataDir) as string : defaultDataDir;
+                serverDataDir = registryServerDataDir ?? defaultDataDir;
             }
             if (!Directory.Exists(serverDataDir))
             {
@@ -119,12 +123,26 @@ namespace AudiobookshelfTray
                     return null;
                 }
             }
-            if (serverDataDir != Settings.Default.DataDir)
-            {
-                Settings.Default.DataDir = serverDataDir;
-                Settings.Default.Save();
-            }
+            if (serverDataDir != registryServerDataDir || serverDataDir != Settings.Default.DataDir)
+                SaveServerDataDir(serverDataDir);
             return serverDataDir;
+        }
+
+        public void SaveServerDataDir(string serverDataDir)
+        {
+            Settings.Default.DataDir = serverDataDir;
+            Settings.Default.Save();
+            Registry.SetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir", serverDataDir);
+        }
+        public string GetServerPort()
+        {
+            return Settings.Default.ServerPort;
+        }
+
+        public void SaveServerPort(string serverPort)
+        {
+            Settings.Default.ServerPort = serverPort;
+            Settings.Default.Save();
         }
 
         private void SettingsClicked(object sender, EventArgs e)
@@ -155,15 +173,15 @@ namespace AudiobookshelfTray
             {
                 Debug.WriteLine("Adding to startup");
                 rk.SetValue("Audiobookshelf", System.Windows.Forms.Application.ExecutablePath);
-                Properties.Settings.Default.StartAtLogin = true;
+                Settings.Default.StartAtLogin = true;
             }
             else
             {
                 Debug.WriteLine("Removing from startup");
                 rk.DeleteValue("Audiobookshelf", false);
-                Properties.Settings.Default.StartAtLogin = false;
+                Settings.Default.StartAtLogin = false;
             }
-            Properties.Settings.Default.Save();
+            Settings.Default.Save();
         }
 
         private void AboutClicked(object sender, EventArgs e)
@@ -176,6 +194,21 @@ namespace AudiobookshelfTray
         {
             Debug.WriteLine("About to exit...");
             StopServer();
+            if (_runInstall)
+            {
+                Process installerProcess = new()
+                {
+                    StartInfo = new ProcessStartInfo()
+                    {
+                        FileName = _installerPath,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    },
+                    EnableRaisingEvents = true
+                };
+                installerProcess.Start();
+            }   
         }
 
         public void ExitClicked(object sender, EventArgs e)
@@ -343,7 +376,7 @@ namespace AudiobookshelfTray
         {
             if (_serverProcess == null) return;
 
-            System.Diagnostics.Process.Start("http://localhost:" + Settings.Default.ServerPort);
+            Process.Start("http://localhost:" + Settings.Default.ServerPort);
         }
 
         // Why??
@@ -360,8 +393,8 @@ namespace AudiobookshelfTray
                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(outLine.Data, @"v\d+\.\d+\.\d+$");
                 if (match.Success)
                 {
-                    Properties.Settings.Default.ServerVersion = match.Value;
-                    Properties.Settings.Default.Save();
+                    Settings.Default.ServerVersion = match.Value;
+                    Settings.Default.Save();
                 }
                 else
                 {
@@ -376,6 +409,84 @@ namespace AudiobookshelfTray
             {
                 // Server logs form is open add line
                 _serverLogsForm.AddLogLine(outLine.Data);
+            }
+        }
+
+        private async void CheckForUpdates(object sender, EventArgs e)
+        {
+            // Find latest release on GitHub
+            GitHubClient client = new(new ProductHeaderValue(_trayAppName));
+            IReadOnlyList<Release> releases = await client.Repository.Release.GetAll(_repoOwner, _repoName);
+            Release latestRelease = releases[0];
+            Debug.WriteLine("Latest release: " + latestRelease.TagName);
+            Debug.WriteLine("Current release: " + Settings.Default.ServerVersion);
+
+            if (latestRelease.TagName != Settings.Default.ServerVersion)
+            {
+                // Find installer asset
+                ReleaseAsset exeAsset = latestRelease.Assets.First(asset => asset.Name.EndsWith(".exe"));
+                if (exeAsset == null)
+                {
+                    Debug.WriteLine("No exe asset found");
+                    MessageBox.Show("Failed to find installer for the latest release.", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Ask user if they want to download and install the new version
+                if (MessageBox.Show("New version " + latestRelease.TagName + " available.\nDownload and install it?", "Audiobookshelf", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    // Download the new installer to a temp directory and run it
+                    string tempDir = Path.Combine(Path.GetTempPath(), "Audiobookshelf");
+                    if (!Directory.Exists(tempDir))
+                    {
+                        Directory.CreateDirectory(tempDir);
+                    }
+                    _installerPath = Path.Combine(tempDir, exeAsset.Name);
+                    if (await DownloadInstaller(exeAsset.BrowserDownloadUrl))
+                    {
+                        MessageBox.Show("About to install new version. Audiobookshelf will exit now.", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        _runInstall = true;
+                        ExitClicked(sender, e);
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Failed to download installer");
+                        MessageBox.Show("Failed to download installer", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }                        
+            }
+            else
+            {
+                MessageBox.Show("No updates available", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private async Task<bool> DownloadInstaller(string downloadUrl)
+        {
+            Debug.WriteLine("Downloading installer to " + _installerPath);
+            System.Net.Http.HttpClient httpClient = new();
+            System.Net.Http.HttpResponseMessage response = await httpClient.GetAsync(downloadUrl);
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using Stream stream = await response.Content.ReadAsStreamAsync();
+                    using FileStream fileStream = new(_installerPath, System.IO.FileMode.Create, FileAccess.Write);
+                    await stream.CopyToAsync(fileStream);
+                    Debug.WriteLine("Downloaded installer to " + _installerPath);
+                    fileStream.Close();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Failed to download installer: " + ex.ToString());
+                    return false;
+                }
+            }
+            else
+            {
+                Debug.WriteLine("Failed to download installer: " + response.StatusCode);
+                return false;
             }
         }
     }

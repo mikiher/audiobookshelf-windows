@@ -7,13 +7,19 @@ namespace AudiobookshelfTray
     public partial class SettingsDialog : Form
     {
         private readonly AppTray _app;
+        private readonly string _initialPort;
+        private readonly string _initialDataFolder;
+
         public SettingsDialog(AppTray app)
         {
             InitializeComponent();
 
-            textBoxPort.Text = Properties.Settings.Default.ServerPort;
-            textBoxDataFolder.Text = Properties.Settings.Default.DataDir;
             _app = app;
+            _initialPort = _app.GetServerPort();
+            _initialDataFolder = _app.GetServerDataDir();
+
+            textBoxPort.Text = _initialPort;
+            textBoxDataFolder.Text = _initialDataFolder;            
         }
 
         private void CancelClicked(object sender, EventArgs e)
@@ -38,11 +44,10 @@ namespace AudiobookshelfTray
         {
             if (ValidatePort() && ValidateDataFolder())
             {
-                if (textBoxDataFolder.Text != Properties.Settings.Default.DataDir || textBoxPort.Text != Properties.Settings.Default.ServerPort)
+                if (textBoxDataFolder.Text != _initialDataFolder || textBoxPort.Text != _initialPort)
                 {
-                    Properties.Settings.Default.ServerPort = textBoxPort.Text;
-                    Properties.Settings.Default.DataDir = textBoxDataFolder.Text;
-                    Properties.Settings.Default.Save();
+                    _app.SaveServerPort(textBoxDataFolder.Text);
+                    _app.SaveServerDataDir(textBoxDataFolder.Text);
                     DialogResult result = MessageBox.Show("Changing server settings requires a server restart. Do you want to restart it now?",
                         "Audiobookshelf", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     if (result == DialogResult.No)
@@ -86,11 +91,6 @@ namespace AudiobookshelfTray
             }
             errorProviderPort.SetError(labelPort, "");
             return true;
-        }
-
-        private void PortValidated(object sender, EventArgs e)
-        {
-
         }
 
         private void PortTextChanged(object sender, EventArgs e)
