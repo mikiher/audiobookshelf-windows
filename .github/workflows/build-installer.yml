@@ -10,11 +10,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
-    steps:
-      # Test Inno Setup
-      - name: Test Inno Setup
-        run: iscc /?
-        
+    steps:       
       # 1. Build the audiobookshelf executable
       - uses: actions/checkout@v3
         with:
@@ -46,3 +42,7 @@ jobs:
 
       - name: Build solution
         run: dotnet build -c Release
+
+      # 3. Build the installer
+      - name: Compile inno setup
+        run: iscc Setup/installer.iss
