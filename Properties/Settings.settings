@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="ServerVersion" Type="System.String" Scope="User">
-      <Value Profile="(Default)">v2.6.0</Value>
+      <Value Profile="(Default)">v2.7.0</Value>
     </Setting>
     <Setting Name="ServerName" Type="System.String" Scope="User">
       <Value Profile="(Default)">Audiobookshelf</Value>
