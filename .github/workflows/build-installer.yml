@@ -11,6 +11,9 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # Test Inno Setup
+      - name: Test Inno Setup
+        run: iscc /?
       # 1. Build the audiobookshelf executable
       - uses: actions/checkout@v3
         with:
