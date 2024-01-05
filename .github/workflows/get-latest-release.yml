@@ -17,4 +17,5 @@ jobs:
               repo: 'audiobookshelf',
             })
             console.log(data.tag_name)
-            console.log(context)
+            return data.tag_name
+          result-encoding: string
