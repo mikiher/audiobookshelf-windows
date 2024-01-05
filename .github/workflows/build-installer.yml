@@ -24,10 +24,22 @@ jobs:
         uses: actions/setup-dotnet@v1
 
       # 1. Build the audiobookshelf executable
+      - name: Get Latest Audiobookshelf Release Tag
+        id: get_latest_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.getLatestRelease({
+              owner: 'advplyr',
+              repo: 'audiobookshelf',
+            })
+            console.log('Audiobookshelf latest release tag: ' + data.tag_name)
+            return data.tag_name
+          result-encoding: string
       - uses: actions/checkout@v3
         with:
           repository: advplyr/audiobookshelf
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.get_latest_release.outputs.result }}
           path: ./audiobookshelf
 
       - name: Install dependencies
