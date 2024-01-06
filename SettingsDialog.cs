@@ -46,7 +46,7 @@ namespace AudiobookshelfTray
             {
                 if (textBoxDataFolder.Text != _initialDataFolder || textBoxPort.Text != _initialPort)
                 {
-                    _app.SaveServerPort(textBoxDataFolder.Text);
+                    _app.SaveServerPort(textBoxPort.Text);
                     _app.SaveServerDataDir(textBoxDataFolder.Text);
                     DialogResult result = MessageBox.Show("Changing server settings requires a server restart. Do you want to restart it now?",
                         "Audiobookshelf", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
