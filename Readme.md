@@ -22,7 +22,7 @@ You **do not** need to install .NET Framework, as it is included in any Windows 
 You **do not** need to install Node.js, as the server executable is pre-packaged with it.
 
 ## Installation
-Download the latest installer release from the [release page](https://github.com/mikiher/audiobookshelf-windows/releases/tag/v2.7.1) and run it.
+Download the latest installer release from the [release page](https://github.com/mikiher/audiobookshelf-windows/releases/tag/v2.7.1.1) and run it.
 
 ## Caveats
 - The server currently uses [tone](https://github.com/sandreas/tone) to embed metadata and covers in audio files.
