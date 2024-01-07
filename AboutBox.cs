@@ -9,10 +9,12 @@ namespace AudiobookshelfTray
         public AboutBox()
         {
             InitializeComponent();
-            Text = String.Format("About {0} Server", AssemblyTitle);
+            Text = String.Format("About {0}", AssemblyTitle);
             labelProductName.Text = AssemblyProduct;
-            labelVersion.Text = String.Format("Version {0}", AssemblyVersion);
-            labelVersion.Click += (s, e) => System.Diagnostics.Process.Start("https://github.com/advplyr/audiobookshelf/releases/tag/" + AssemblyVersion);
+            labelServerVersion.Text = String.Format("Server Version {0}", AssemblyServerVersion);
+            labelServerVersion.Click += (s, e) => System.Diagnostics.Process.Start("https://github.com/advplyr/audiobookshelf/releases/tag/" + AssemblyServerVersion);
+            labelAppVersion.Text = String.Format("App Version {0}", AssemblyAppVersion);
+            labelAppVersion.Click += (s, e) => System.Diagnostics.Process.Start("https://github.com/mikiher/audiobookshelf-windows/releases/tag/" + AssemblyAppVersion);
             labelURL.Text = "audiobookshelf.org";
             labelURL.Click += (s, e) => System.Diagnostics.Process.Start("https://www.audiobookshelf.org/");
             StartPosition = FormStartPosition.CenterScreen;
@@ -28,11 +30,19 @@ namespace AudiobookshelfTray
             }
         }
 
-        public string AssemblyVersion
+        public string AssemblyServerVersion
         {
             get
             {
                 return Settings.Default.ServerVersion;
+            }
+        }
+
+        public string AssemblyAppVersion
+        {
+            get
+            {
+                return Settings.Default.AppVersion;
             }
         }
 

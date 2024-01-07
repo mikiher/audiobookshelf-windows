@@ -19,6 +19,7 @@ namespace AudiobookshelfTray
         private readonly string _trayAppName = "AudiobookshelfTray";
         private readonly string _repoOwner = "mikiher";
         private readonly string _repoName = "audiobookshelf-windows";
+        private readonly string _appVersion;
 
         private Process _serverProcess = null;
         private ServerLogs _serverLogsForm = null;
@@ -50,6 +51,8 @@ namespace AudiobookshelfTray
             _startAtLoginCheckboxMenuItem.Checked = Settings.Default.StartAtLogin;
             _settingsMenuItem = new ToolStripMenuItem("Settings", null, SettingsClicked);
             _checkForUpdatesMenuItem = new ToolStripMenuItem("Check for Updates", null, CheckForUpdates);
+
+            _appVersion = GetAppVersion();
 
             _trayIcon = new NotifyIcon()
             {
@@ -134,6 +137,22 @@ namespace AudiobookshelfTray
             Settings.Default.Save();
             Registry.SetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir", serverDataDir);
         }
+
+        public string GetAppVersion()
+        {
+            string appVersion = Settings.Default.AppVersion;
+            string registryAppVersion = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "AppVersion", null) as string;
+            if (registryAppVersion != null && registryAppVersion != appVersion)
+                SaveAppVersion(registryAppVersion);
+            return registryAppVersion ?? appVersion;
+        }
+
+        public void SaveAppVersion(string appVersion)
+        {
+            Settings.Default.AppVersion = appVersion;
+            Settings.Default.Save();
+        }
+
         public string GetServerPort()
         {
             return Settings.Default.ServerPort;
@@ -420,9 +439,9 @@ namespace AudiobookshelfTray
             IReadOnlyList<Release> releases = await client.Repository.Release.GetAll(_repoOwner, _repoName);
             Release latestRelease = releases[0];
             Debug.WriteLine("Latest release: " + latestRelease.TagName);
-            Debug.WriteLine("Current release: " + Settings.Default.ServerVersion);
+            Debug.WriteLine("Current release: " + _appVersion);
 
-            if (latestRelease.TagName != Settings.Default.ServerVersion)
+            if (latestRelease.TagName != _appVersion)
             {
                 // Find installer asset
                 ReleaseAsset exeAsset = latestRelease.Assets.First(asset => asset.Name.EndsWith(".exe"));
