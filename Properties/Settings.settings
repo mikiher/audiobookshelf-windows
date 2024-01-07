@@ -21,7 +21,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="AppVersion" Type="System.String" Scope="User">
-      <Value Profile="(Default)">v2.7.1.1</Value>
+      <Value Profile="(Default)">v2.7.1.2</Value>
     </Setting>
   </Settings>
 </SettingsFile>
