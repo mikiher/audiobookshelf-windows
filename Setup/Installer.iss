@@ -5,7 +5,7 @@
 #define ServerBinDir "..\..\audiobookshelf\dist\win"
 
 #define MyAppName "Audiobookshelf"
-#define MyAppVersion "v2.7.1.1"
+#define MyAppVersion "v2.7.1.2"
 #define MyAppPublisher "Audiobookshelf"
 #define MyAppURL "https://www.audiobookshelf.org/"
 #define MyAppExeName "AudiobookshelfTray.exe"
@@ -59,7 +59,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 ; Don't delete datadir in HKCU during uninstall - we want to keep the data dir if the user reinstalls
 Root: HKCU; Subkey: "Software\{#MyAppName}"; ValueType: string; ValueName: "DataDir"; ValueData: "{code:GetDataDir}"; 
 Root: HKCU; Subkey: "Software\{#MyAppName}"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}"; Flags: uninsdeletevalue
-Root: HKCU; Subkey: "Software\{#MyAppName}"; ValueType: string; ValueName: "AppVersion"; ValueData: "{#MyAppVersion}"; Flags: uninsdeletevalue"
+Root: HKCU; Subkey: "Software\{#MyAppName}"; ValueType: string; ValueName: "AppVersion"; ValueData: "{#MyAppVersion}"; Flags: uninsdeletevalue
 
 [Code]
 var
