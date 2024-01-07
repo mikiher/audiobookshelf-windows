@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Windows.Forms;
+using NLog;
 
 namespace AudiobookshelfTray
 {
     public partial class ServerLogs : Form
     {
+        private readonly Logger _logger = LogManager.GetCurrentClassLogger();
         public ServerLogs()
         {
             InitializeComponent();
@@ -19,7 +21,7 @@ namespace AudiobookshelfTray
 
         public void SetLogs(List<string> logLines)
         {
-            Debug.WriteLine("Setting Logs " + logLines.Count);
+            _logger.Debug("Setting Logs " + logLines.Count);
             string[] linesArray = [.. logLines];
 
             if (linesArray != null && linesArray.Length > 0)
@@ -33,7 +35,7 @@ namespace AudiobookshelfTray
             }
             else
             {
-                Debug.WriteLine("Error: Invalid logLines");
+                _logger.Error("Error: Invalid logLines");
             }
         }
 

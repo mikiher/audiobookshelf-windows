@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using NLog;
 
 namespace AudiobookshelfTray
 {
@@ -29,6 +30,8 @@ namespace AudiobookshelfTray
 
         private delegate bool HandlerRoutine(CtrlTypes CtrlType);
 
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
         /// <summary>
         /// Tries to stop a process by sending a CTRL_C_EVENT to its console.
         /// This allows the process to perform cleanup operations before exiting, unlike Process.Kill().
@@ -49,17 +52,17 @@ namespace AudiobookshelfTray
                 bool ctrlCSent = GenerateConsoleCtrlEvent(CtrlTypes.CTRL_C_EVENT, 0);
                 if (ctrlCSent)
                 {
-                    Debug.WriteLine("Sent Ctrl+C to process. Waiting for it to exit");
+                    _logger.Debug("Sent Ctrl+C to process. Waiting for it to exit");
                     try
                     {
                         if (!process.WaitForExit(8000))
                         {
-                            Debug.WriteLine("Process did not exit within 8 seconds");
+                            _logger.Error("Process did not exit within 8 seconds");
                         }
                     }
                     catch (Exception e)
                     {
-                        Debug.WriteLine($"Exception thrown by Process.WaitForExit: {e}");
+                        _logger.Error($"Exception thrown by Process.WaitForExit: {e}");
                     }
                 }
                 SetConsoleCtrlHandler(null, false);
@@ -68,7 +71,7 @@ namespace AudiobookshelfTray
 
             if (!process.HasExited)
             {
-                Debug.WriteLine("Failed to send Ctrl+C to process. Killing it instead");
+                _logger.Error("Failed to send Ctrl+C to process. Killing it instead");
                 try
                 {
                     process.Kill();
@@ -76,7 +79,7 @@ namespace AudiobookshelfTray
                 }
                 catch (Exception e)
                 {
-                    Debug.WriteLine($"Exception thrown by Process.Kill: {e}");
+                    _logger.Error($"Exception thrown by Process.Kill: {e}");
                 }
             }
         }
