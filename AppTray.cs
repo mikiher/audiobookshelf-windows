@@ -23,6 +23,7 @@ namespace AudiobookshelfTray
         private readonly string _repoOwner = "mikiher";
         private readonly string _repoName = "audiobookshelf-windows";
         private readonly string _appVersion;
+        private readonly System.Timers.Timer _dailyTimer = new();
 
         private Process _serverProcess = null;
         private ServerLogs _serverLogsForm = null;
@@ -36,6 +37,7 @@ namespace AudiobookshelfTray
         private readonly ToolStripMenuItem _serverLogsMenuItem;
         private readonly ToolStripMenuItem _aboutMenuItem;
         private readonly ToolStripMenuItem _startAtLoginCheckboxMenuItem;
+        private readonly ToolStripMenuItem _autoCheckForUpdatesCheckboxMenuItem;
         private readonly ToolStripMenuItem _settingsMenuItem;
         private readonly ToolStripMenuItem _checkForUpdatesMenuItem;
 
@@ -43,6 +45,8 @@ namespace AudiobookshelfTray
 
         public AppTray()
         {
+            _appVersion = GetAppVersion();
+
             _stopServerMenuItem = new ToolStripMenuItem("Stop Server", null, StopServerClicked) { Enabled = false };
             _startServerMenuItem = new ToolStripMenuItem("Start Server", null, StartServerClicked) { Enabled = false };
             _serverLogsMenuItem = new ToolStripMenuItem("Server Logs", null, ShowServerLogsClicked) { Enabled = false };
@@ -52,10 +56,13 @@ namespace AudiobookshelfTray
             _startAtLoginCheckboxMenuItem = new ToolStripMenuItem("Start Audiobookshelf at Login") { CheckOnClick = true };
             _startAtLoginCheckboxMenuItem.CheckedChanged += StartAtLoginCheckedChanged;
             _startAtLoginCheckboxMenuItem.Checked = Settings.Default.StartAtLogin;
+            _autoCheckForUpdatesCheckboxMenuItem = new ToolStripMenuItem("Automatically Check for Updates") { CheckOnClick = true };
+            _autoCheckForUpdatesCheckboxMenuItem.CheckedChanged += AutoCheckForUpdatesChanged;
+            _autoCheckForUpdatesCheckboxMenuItem.Checked = Settings.Default.AutoCheckForUpdates;
             _settingsMenuItem = new ToolStripMenuItem("Settings", null, SettingsClicked);
             _checkForUpdatesMenuItem = new ToolStripMenuItem("Check for Updates", null, CheckForUpdates);
-
-            _appVersion = GetAppVersion();
+            _dailyTimer.Interval = 24 * 60 * 60 * 1000; // 24 hours
+            _dailyTimer.Elapsed += CheckForUpdates;
 
             _trayIcon = new NotifyIcon()
             {
@@ -65,6 +72,7 @@ namespace AudiobookshelfTray
                     Items = {
                         _openServerMenuItem,
                         _startAtLoginCheckboxMenuItem,
+                        _autoCheckForUpdatesCheckboxMenuItem,
                         _settingsMenuItem,
                         new ToolStripSeparator(),
                         _stopServerMenuItem,
@@ -105,6 +113,23 @@ namespace AudiobookshelfTray
             MainForm.Load += (sender, e) => { if (_shouldExit) ExitClicked(sender, e); };
 
             Init();
+        }
+
+        private void AutoCheckForUpdatesChanged(object sender, EventArgs e)
+        {
+            _logger.Debug("AutoCheckForUpdatesChanged");
+            Settings.Default.AutoCheckForUpdates = _autoCheckForUpdatesCheckboxMenuItem.Checked;
+            Settings.Default.Save();
+
+            if (Settings.Default.AutoCheckForUpdates)
+            {
+                CheckForUpdates(sender, e);
+                _dailyTimer.Start();
+            }
+            else
+            {
+                _dailyTimer.Stop();
+            }
         }
 
         public string GetServerDataDir()
@@ -480,7 +505,12 @@ namespace AudiobookshelfTray
             }
             else
             {
-                MessageBox.Show("No updates available", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // silent if called from timer or autoCheckForUpdates checkbox
+                if (sender == _checkForUpdatesMenuItem)
+                {
+                    MessageBox.Show("No updates available", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                
             }
         }
 
