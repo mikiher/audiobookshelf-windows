@@ -61,7 +61,7 @@ jobs:
 
       # 3. Build the installer
       - name: Compile inno setup
-        run: iscc /DMayAppVersion=${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || 'v0.0.0.1' }} Setup/installer.iss
+        run: iscc /DMyAppVersion=${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || 'v0.0.0.1' }} Setup/installer.iss
         working-directory: ./audiobookshelf-windows
 
       # 4. Create a release
