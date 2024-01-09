@@ -63,3 +63,15 @@ jobs:
       - name: Compile inno setup
         run: iscc /DMayAppVersion=${{ steps.get_latest_release.outputs.result }} Setup/installer.iss
         working-directory: ./audiobookshelf-windows
+
+      # 4. Create a release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event_name == 'release' ? steps.get_latest_release.outputs.result : 'test_tag' }}
+          release_name: ${{ github.event_name == 'release' ? steps.get_latest_release.outputs.result : 'test_release' }}
+          draft: true
+          prerelease: true
