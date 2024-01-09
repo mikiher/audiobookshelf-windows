@@ -7,12 +7,16 @@ jobs:
   create-test-release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-release@v1
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: create release
+        uses: actions/create-release@v1
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: test_tag
           release_name: test_release
-          draft: true
+          draft: false
           prerelease: true
