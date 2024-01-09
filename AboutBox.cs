@@ -34,7 +34,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return Settings.Default.ServerVersion;
+                return String.IsNullOrEmpty(Settings.Default.ServerVersion) ? "unknown" : Settings.Default.ServerVersion;
             }
         }
 
@@ -42,7 +42,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return Settings.Default.AppVersion;
+                return String.IsNullOrEmpty(Settings.Default.AppVersion) ? "unknown" : Settings.Default.AppVersion;
             }
         }
 

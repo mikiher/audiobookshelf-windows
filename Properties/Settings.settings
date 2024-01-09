@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="ServerVersion" Type="System.String" Scope="User">
-      <Value Profile="(Default)">v2.7.1</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="ServerName" Type="System.String" Scope="User">
       <Value Profile="(Default)">Audiobookshelf</Value>
@@ -21,7 +21,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="AppVersion" Type="System.String" Scope="User">
-      <Value Profile="(Default)">v2.7.1.2</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="AutoCheckForUpdates" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>

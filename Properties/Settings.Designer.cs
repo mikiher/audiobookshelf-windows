@@ -25,7 +25,7 @@ namespace AudiobookshelfTray.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("v2.7.1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string ServerVersion {
             get {
                 return ((string)(this["ServerVersion"]));
@@ -97,7 +97,7 @@ namespace AudiobookshelfTray.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("v2.7.1.2")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string AppVersion {
             get {
                 return ((string)(this["AppVersion"]));
