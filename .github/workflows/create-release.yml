@@ -1,0 +1,16 @@
+name: Crete test release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-test-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-release@v1
+        id: create_release
+        with:
+          tag_name: test_tag
+          release_name: test_release
+          draft: true
+          prerelease: true
