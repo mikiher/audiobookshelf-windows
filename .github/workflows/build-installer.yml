@@ -61,7 +61,7 @@ jobs:
 
       # 3. Build the installer
       - name: Compile inno setup
-        run: iscc /DMyAppVersion=${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || 'v0.0.0.1' }} Setup/installer.iss
+        run: iscc /DMyAppVersion=${{ steps.get_latest_release.outputs.result }} Setup/installer.iss
         working-directory: ./audiobookshelf-windows
 
       # 4. Create a release
@@ -84,5 +84,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./audiobookshelf-windows/Setup/Output/AudiobookshelfInstaller.exe
-          asset_name: AudiobookshelfInstaller${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || 'v0.0.0.1' }}.exe
+          asset_name: AudiobookshelfInstaller.${{ steps.get_latest_release.outputs.result }}.exe
           asset_content_type: application/x-msdownload
