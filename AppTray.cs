@@ -355,7 +355,7 @@ namespace AudiobookshelfTray
             {
                 StartInfo = new ProcessStartInfo()
                 {
-                    Arguments = " -p " + serverPort + " --config " + configPath + " --metadata " + metadataPath + " --source windows",
+                    Arguments = " -p " + serverPort + " --config \"" + configPath + "\" --metadata \"" + metadataPath + "\" --source windows",
                     FileName = serverBinPath,
                     WindowStyle = ProcessWindowStyle.Hidden,
                     RedirectStandardOutput = true,
