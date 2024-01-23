@@ -16,10 +16,10 @@ jobs:
 
     steps:
       # 0. Setup steps
-      - name: Use Node.js 20
+      - name: Use Node.js 16
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 16
 
       - name: Install pkg globally
         run: npm install -g pkg
