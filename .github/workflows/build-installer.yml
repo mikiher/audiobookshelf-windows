@@ -5,6 +5,10 @@ on:
     types: [published]
     repository: advplyr/audiobookshelf
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build'
+        required: true
 
 jobs:
   build-windows:
@@ -12,10 +16,10 @@ jobs:
 
     steps:
       # 0. Setup steps
-      - name: Use Node.js 16
+      - name: Use Node.js 20
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 20
 
       - name: Install pkg globally
         run: npm install -g pkg
@@ -61,7 +65,7 @@ jobs:
 
       # 3. Build the installer
       - name: Compile inno setup
-        run: iscc /DMyAppVersion=${{ steps.get_latest_release.outputs.result }} Setup/installer.iss
+        run: iscc /DMyAppVersion=${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }} Setup/installer.iss
         working-directory: ./audiobookshelf-windows
 
       # 4. Create a release
@@ -71,10 +75,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || 'v0.0.0.1' }}
-          release_name: ${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || 'v0.0.0.1' }}-auto
+          tag_name: ${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }}
+          release_name: ${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }}-auto
           draft: true
-          prerelease: true
+          prerelease: false
       
       - name: Upload Release Asset
         id: upload-release-asset
@@ -84,5 +88,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./audiobookshelf-windows/Setup/Output/AudiobookshelfInstaller.exe
-          asset_name: AudiobookshelfInstaller.${{ steps.get_latest_release.outputs.result }}.exe
+          asset_name: AudiobookshelfInstaller.${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }}.exe
           asset_content_type: application/x-msdownload
