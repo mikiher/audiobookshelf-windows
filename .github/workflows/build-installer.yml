@@ -1,9 +1,8 @@
 name: Build Windows installer on Release of audiobookshelf
 
 on:
-  release:
-    types: [published]
-    repository: advplyr/audiobookshelf
+  repository_dispatch:
+    types: [build-windows]
   workflow_dispatch:
     inputs:
       tag:
@@ -65,7 +64,7 @@ jobs:
 
       # 3. Build the installer
       - name: Compile inno setup
-        run: iscc /DMyAppVersion=${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }} Setup/installer.iss
+        run: iscc /DMyAppVersion=${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }} Setup/installer.iss
         working-directory: ./audiobookshelf-windows
 
       # 4. Create a release
@@ -75,8 +74,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }}
-          release_name: ${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }}-auto
+          tag_name: ${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}
+          release_name: ${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}-auto
           draft: true
           prerelease: false
       
@@ -88,5 +87,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./audiobookshelf-windows/Setup/Output/AudiobookshelfInstaller.exe
-          asset_name: AudiobookshelfInstaller.${{ github.event_name == 'release' && steps.get_latest_release.outputs.result || inputs.tag }}.exe
+          asset_name: AudiobookshelfInstaller.${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}.exe
           asset_content_type: application/x-msdownload
