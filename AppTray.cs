@@ -43,6 +43,8 @@ namespace AudiobookshelfTray
 
         private readonly List<string> _serverLogsList = [];
 
+        private DismissableMessageBox _newVersionAvailableDialog = null;
+
         public AppTray()
         {
             _appVersion = GetAppVersion();
@@ -469,6 +471,11 @@ namespace AudiobookshelfTray
             _logger.Debug("Latest release: " + latestRelease.TagName);
             _logger.Debug("Current release: " + _appVersion);
 
+            if(_newVersionAvailableDialog != null)
+            {
+                _newVersionAvailableDialog.Dismiss();
+            }
+
             if (latestRelease.TagName != _appVersion)
             {
                 // Find installer asset
@@ -481,7 +488,10 @@ namespace AudiobookshelfTray
                 }
 
                 // Ask user if they want to download and install the new version
-                if (MessageBox.Show("New version " + latestRelease.TagName + " available.\nDownload and install it?", "Audiobookshelf", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                _newVersionAvailableDialog = new DismissableMessageBox("Audiobookshelf Update");
+                DialogResult result = _newVersionAvailableDialog.Show("A New version " + latestRelease.TagName + " is available.\nDownload and install it?", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                _newVersionAvailableDialog = null;
+                if (result == DialogResult.Yes)
                 {
                     // Download the new installer to a temp directory and run it
                     string tempDir = Path.Combine(Path.GetTempPath(), "Audiobookshelf");
