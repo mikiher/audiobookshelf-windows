@@ -26,8 +26,6 @@ You **do not** need to install Node.js, as the server executable is pre-packaged
 Download the latest installer release from the [release page](https://github.com/mikiher/audiobookshelf-windows/releases/latest) and run it.
 
 ## Caveats
-- The server currently uses [tone](https://github.com/sandreas/tone) to embed metadata and covers in audio files.
-`tone` is slated to be replaced soon, so it is not included in the Windows installer release
 - It's not currently possible to migrate the server data from a previous Windows Docker installation to this one (see [this issue](https://github.com/mikiher/audiobookshelf-windows/issues/3))
 
 ## Development
@@ -39,18 +37,18 @@ It was based on the [audiobookshelf-win](https://github.com/advplyr/audiobookshe
 The installer was developed using [Inno Setup](https://jrsoftware.org/isinfo.php).
 
 ### 1. Building the Audiobookshelf server executable
-- Install [Node.js 16](https://nodejs.org/en/download/) (Must be version 16) 
+- Install [Node.js 20](https://nodejs.org/en/download/) (Must be version 20) 
     - Optional: install [nvm-windows](https://github.com/coreybutler/nvm-windows#installation--upgrades) to manage multiple Node.js versions
 - Install Visual Studio Code
 - Clone the [audiobookshelf](https://github.com/advplyr/audiobookshelf.git) Github repository
 - Open the `audiobookshelf` folder in Visual Studio Code
 - Open the terminal (Ctrl+Shift+`)
 - Run `npm ci` to install the dependencies
-- Run `npm i pkg -g` to install the pkg (Node.js to executable) package
+- Run `npm i @yao-pkg/pkg -g` to install the yao-pkg (Node.js to executable) package. Yao-pkg is a fork of the original pkg package, which is no longer maintained.
 - Run `npm run build-win` to build the audiobookshelf server executable (it will be placed in the `dist\win` folder)
 
 ### 2. Building the Audiobookshelf tray app
-The tray can be built using either Visual Studio 2022 or Visual Studio Code.
+The tray app can be built using either Visual Studio 2022 or Visual Studio Code.
 - If you need to make design changes to the UI, it's recommended to use Visual Studio 2022, as it has a visual designer for Winforms.
 - It's convenient to use Visual Studio 2022 since it has a built-in debug console, in which you can see Debeug.WriteLine() messages.
 - If you only need to make code changes, you can use Visual Studio Code.
@@ -68,7 +66,7 @@ The tray can be built using either Visual Studio 2022 or Visual Studio Code.
 - Install the latest [.NET SDK](https://dotnet.microsoft.com/en-us/download)
 - Clone [this repository](https://github.com/mikiher/audiobookshelf-windows.git)
 - Open the terminal (Ctrl+Shift+`)
-- Run `dotnet build -c Release` or `dotnet build` or to build the solution (you will find the executable in the `bin\x64\Release\net461` or `bin\x64\Debug\net461` folder, depending on the build configuration)
+- Run `dotnet build -c Release` or `dotnet build` to build the solution (you will find the executable in the `bin\x64\Release\net461` or `bin\x64\Debug\net461` folder, depending on the build configuration)
 
 #### Running the tray app
 You can run or debug the tray app directly from Visual Studio 2022 or Visual Studio Code.
