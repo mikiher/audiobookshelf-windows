@@ -20,8 +20,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install pkg globally
-        run: npm install -g pkg
+      - name: Install pkg globally (using yao-pkg fork for targetting node20)
+        run: npm install -g @yao-pkg/pkg
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v1
