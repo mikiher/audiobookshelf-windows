@@ -78,8 +78,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}
-          release_name: ${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}-auto
-          draft: true
+          release_name: ${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}
+          body: |
+            - Server release [${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}](https://github.com/advplyr/audiobookshelf/releases/tag/${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }})
+
+            No changes on the Windows side.
+          draft: false
           prerelease: false
       
       - name: Upload Release Asset
