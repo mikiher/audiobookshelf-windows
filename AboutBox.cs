@@ -6,8 +6,15 @@ namespace AudiobookshelfTray
 {
     partial class AboutBox : Form
     {
-        public AboutBox()
+        private readonly string _serverName;
+        private readonly string _serverVersion;
+        private readonly string _appVersion;
+
+        public AboutBox(AppTray appTray)
         {
+            _serverName = appTray.GetRegistryValue("ServerName", "Audiobookshelf");
+            _serverVersion = appTray.GetRegistryValue("ServerVersion", "");
+            _appVersion = appTray.GetRegistryValue("AppVersion", "");
             InitializeComponent();
             Text = String.Format("About {0}", AssemblyTitle);
             labelProductName.Text = AssemblyProduct;
@@ -26,7 +33,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return string.Format("{0}\nSelf-hosted audiobook and podcast server", Settings.Default.ServerName);
+                return string.Format("{0}\nSelf-hosted audiobook and podcast server", _serverName);
             }
         }
 
@@ -34,7 +41,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return String.IsNullOrEmpty(Settings.Default.ServerVersion) ? "unknown" : Settings.Default.ServerVersion;
+                return String.IsNullOrEmpty(_serverVersion) ? "unknown" : _serverVersion;
             }
         }
 
@@ -42,7 +49,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return String.IsNullOrEmpty(Settings.Default.AppVersion) ? "unknown" : Settings.Default.AppVersion;
+                return String.IsNullOrEmpty(_appVersion) ? "unknown" : _appVersion;
             }
         }
 
@@ -50,7 +57,7 @@ namespace AudiobookshelfTray
         {
             get
             {
-                return Settings.Default.ServerName;
+                return _serverName;
             }
         }
 

@@ -45,9 +45,13 @@ namespace AudiobookshelfTray
 
         private DismissableMessageBox _newVersionAvailableDialog = null;
 
+        private const string REGISTRY_KEY = @"HKEY_CURRENT_USER\Software\Audiobookshelf";
+
         public AppTray()
-        {
-            _appVersion = GetAppVersion();
+        {            // First check if we need to upgrade settings from previous versio// Then migrate settings to registry
+            MigrateSettingsToRegistry();
+
+            _appVersion = GetRegistryValue("AppVersion", "");
 
             _stopServerMenuItem = new ToolStripMenuItem("Stop Server", null, StopServerClicked) { Enabled = false };
             _startServerMenuItem = new ToolStripMenuItem("Start Server", null, StartServerClicked) { Enabled = false };
@@ -57,10 +61,10 @@ namespace AudiobookshelfTray
             _aboutMenuItem = new ToolStripMenuItem("About Audiobookshelf Server", null, AboutClicked);
             _startAtLoginCheckboxMenuItem = new ToolStripMenuItem("Start Audiobookshelf at Login") { CheckOnClick = true };
             _startAtLoginCheckboxMenuItem.CheckedChanged += StartAtLoginCheckedChanged;
-            _startAtLoginCheckboxMenuItem.Checked = Settings.Default.StartAtLogin;
+            _startAtLoginCheckboxMenuItem.Checked = GetRegistryValue("StartAtLogin", true);
             _autoCheckForUpdatesCheckboxMenuItem = new ToolStripMenuItem("Automatically Check for Updates") { CheckOnClick = true };
             _autoCheckForUpdatesCheckboxMenuItem.CheckedChanged += AutoCheckForUpdatesChanged;
-            _autoCheckForUpdatesCheckboxMenuItem.Checked = Settings.Default.AutoCheckForUpdates;
+            _autoCheckForUpdatesCheckboxMenuItem.Checked = GetRegistryValue("AutoCheckForUpdates", true);
             _settingsMenuItem = new ToolStripMenuItem("Settings", null, SettingsClicked);
             _checkForUpdatesMenuItem = new ToolStripMenuItem("Check for Updates", null, CheckForUpdates);
             _dailyTimer.Interval = 24 * 60 * 60 * 1000; // 24 hours
@@ -92,14 +96,6 @@ namespace AudiobookshelfTray
                 Text = _appName
             };
 
-            // Check if we need to upgrade settings from previous version
-            if (Settings.Default.UpgradeRequired)
-            {
-                Settings.Default.Upgrade();
-                Settings.Default.UpgradeRequired = false;
-                Settings.Default.Save();
-            }
-
             //_serverBinDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "InstallDir",
             //    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", _appName)) as string;
 
@@ -120,10 +116,9 @@ namespace AudiobookshelfTray
         private void AutoCheckForUpdatesChanged(object sender, EventArgs e)
         {
             _logger.Debug("AutoCheckForUpdatesChanged");
-            Settings.Default.AutoCheckForUpdates = _autoCheckForUpdatesCheckboxMenuItem.Checked;
-            Settings.Default.Save();
+            SetRegistryValue("AutoCheckForUpdates", _autoCheckForUpdatesCheckboxMenuItem.Checked);
 
-            if (Settings.Default.AutoCheckForUpdates)
+            if (_autoCheckForUpdatesCheckboxMenuItem.Checked)
             {
                 CheckForUpdates(sender, e);
                 _dailyTimer.Start();
@@ -136,12 +131,14 @@ namespace AudiobookshelfTray
 
         public string GetServerDataDir()
         {
-            string serverDataDir = Settings.Default.DataDir;
-            string registryServerDataDir = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir", null) as string;
+            string serverDataDir = GetRegistryValue("DataDir", "");
+            bool updated = false;
+
             if (string.IsNullOrEmpty(serverDataDir))
             {
                 string defaultDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), _appName);
-                serverDataDir = registryServerDataDir ?? defaultDataDir;
+                serverDataDir = defaultDataDir;
+                updated = true;
             }
             if (!Directory.Exists(serverDataDir))
             {
@@ -156,42 +153,24 @@ namespace AudiobookshelfTray
                     return null;
                 }
             }
-            if (serverDataDir != registryServerDataDir || serverDataDir != Settings.Default.DataDir)
+            if (updated && serverDataDir != null)
                 SaveServerDataDir(serverDataDir);
             return serverDataDir;
         }
 
         public void SaveServerDataDir(string serverDataDir)
         {
-            Settings.Default.DataDir = serverDataDir;
-            Settings.Default.Save();
-            Registry.SetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "DataDir", serverDataDir);
-        }
-
-        public string GetAppVersion()
-        {
-            string appVersion = Settings.Default.AppVersion;
-            string registryAppVersion = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Audiobookshelf", "AppVersion", null) as string;
-            if (registryAppVersion != null && registryAppVersion != appVersion)
-                SaveAppVersion(registryAppVersion);
-            return registryAppVersion ?? appVersion;
-        }
-
-        public void SaveAppVersion(string appVersion)
-        {
-            Settings.Default.AppVersion = appVersion;
-            Settings.Default.Save();
+            SetRegistryValue("DataDir", serverDataDir);
         }
 
         public string GetServerPort()
         {
-            return Settings.Default.ServerPort;
+            return GetRegistryValue("ServerPort", "13378");
         }
 
         public void SaveServerPort(string serverPort)
         {
-            Settings.Default.ServerPort = serverPort;
-            Settings.Default.Save();
+            SetRegistryValue("ServerPort", serverPort);
         }
 
         private void SettingsClicked(object sender, EventArgs e)
@@ -222,20 +201,19 @@ namespace AudiobookshelfTray
             {
                 _logger.Debug("Adding to startup");
                 rk.SetValue("Audiobookshelf", System.Windows.Forms.Application.ExecutablePath);
-                Settings.Default.StartAtLogin = true;
+                SetRegistryValue("StartAtLogin", true);
             }
             else
             {
                 _logger.Debug("Removing from startup");
                 rk.DeleteValue("Audiobookshelf", false);
-                Settings.Default.StartAtLogin = false;
+                SetRegistryValue("StartAtLogin", false);
             }
-            Settings.Default.Save();
         }
 
         private void AboutClicked(object sender, EventArgs e)
         {
-            AboutBox aboutBox = new();
+            AboutBox aboutBox = new(this);
             aboutBox.ShowDialog();
         }
 
@@ -349,7 +327,7 @@ namespace AudiobookshelfTray
             string configPath = Path.Combine(serverDataDir, "config");
             string metadataPath = Path.Combine(serverDataDir, "metadata");
 
-            string serverPort = Settings.Default.ServerPort;
+            string serverPort = GetServerPort();
 
             _logger.Debug("Starting service");
 
@@ -426,7 +404,7 @@ namespace AudiobookshelfTray
         {
             if (_serverProcess == null) return;
 
-            Process.Start("http://localhost:" + Settings.Default.ServerPort);
+            Process.Start("http://localhost:" + GetServerPort());
         }
 
         // Why??
@@ -443,8 +421,7 @@ namespace AudiobookshelfTray
                 System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(outLine.Data, @"v\d+\.\d+\.\d+$");
                 if (match.Success)
                 {
-                    Settings.Default.ServerVersion = match.Value;
-                    Settings.Default.Save();
+                    SetRegistryValue("ServerVersion", match.Value);
                 }
                 else
                 {
@@ -550,6 +527,105 @@ namespace AudiobookshelfTray
             {
                 _logger.Error("Failed to download installer: " + response.StatusCode);
                 return false;
+            }
+        }
+
+        private void MigrateSettingsToRegistry()
+        {            // Check if we've already migrated
+            try
+            {
+                if (GetRegistryValue("SettingsMigrated", false))
+                {
+                    return;
+                }
+
+                _logger.Debug("Migrating settings to registry...");
+
+                if (Settings.Default.UpgradeRequired)
+                {
+                    _logger.Debug("Upgrading settings");
+                    Settings.Default.Upgrade();
+                    Settings.Default.UpgradeRequired = false;
+                    Settings.Default.Save();
+                    _logger.Debug("Settings upgraded");
+                }
+                // Migrate all settings to registry
+                _logger.Debug("Setting registry value StartAtLogin: " + Settings.Default.StartAtLogin);
+                SetRegistryValue("StartAtLogin", Settings.Default.StartAtLogin);
+                _logger.Debug("Setting registry value AutoCheckForUpdates: " + Settings.Default.AutoCheckForUpdates);
+                SetRegistryValue("AutoCheckForUpdates", Settings.Default.AutoCheckForUpdates);
+                _logger.Debug("Setting registry value ServerPort: " + Settings.Default.ServerPort);
+                SetRegistryValue("ServerPort", Settings.Default.ServerPort);
+                _logger.Debug("Setting registry value DataDir: " + Settings.Default.DataDir);
+                SetRegistryValue("ServerVersion", Settings.Default.ServerVersion);
+                
+                // Mark migration as complete
+                SetRegistryValue("SettingsMigrated", true);
+                _logger.Debug("Settings migration completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to migrate settings to registry: {ex}");
+                return;
+            }
+        }
+
+        public T GetRegistryValue<T>(string name, T defaultValue)
+        {
+            try
+            {
+                var value = Registry.GetValue(REGISTRY_KEY, name, defaultValue);
+                if (value == null)
+                    return defaultValue;
+
+                if (value is int intValue)
+                {
+                    if (typeof(T) == typeof(bool))
+                    {
+                        return (T)(object)(intValue != 0);
+                    }
+                }
+                else if (value is string stringValue)
+                {
+                    if (typeof(T) == typeof(string))
+                    {
+                        return (T)(object)stringValue;
+                    }
+                }
+                else if (value is bool boolValue)
+                {
+                    if (typeof(T) == typeof(bool))
+                    {
+                        return (T)(object)boolValue;
+                    }
+                }
+
+                _logger.Debug("Registry " + name + " value is unknown type: " + value.GetType().Name);
+                return defaultValue;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to read registry value {name}: {ex}. Returning default value '{defaultValue}'");
+                return defaultValue;
+            }
+        }
+
+        private void SetRegistryValue(string name, object value)
+        {
+            try
+            {
+                if (value is bool boolValue)
+                {
+                    Registry.SetValue(REGISTRY_KEY, name, boolValue ? 1 : 0, RegistryValueKind.DWord);
+                }
+                else
+                {
+                    Registry.SetValue(REGISTRY_KEY, name, value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to set registry value {name} to {value}: {ex}");
             }
         }
     }
