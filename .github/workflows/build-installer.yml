@@ -83,7 +83,7 @@ jobs:
             - Server release [${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }}](https://github.com/advplyr/audiobookshelf/releases/tag/${{ github.event_name == 'repository_dispatch' && steps.get_latest_release.outputs.result || inputs.tag }})
 
             No changes on the Windows side.
-          draft: false
+          draft: ${{ github.event_name == 'workflow_dispatch' }}
           prerelease: false
       
       - name: Upload Release Asset
