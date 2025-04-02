@@ -1,7 +1,8 @@
-﻿using System;
+﻿using System.Net.Sockets;
+using System;
 using System.ComponentModel;
 using System.Windows.Forms;
-
+using System.Diagnostics;
 namespace AudiobookshelfTray
 {
     public partial class SettingsDialog : Form
@@ -19,13 +20,14 @@ namespace AudiobookshelfTray
             _initialDataFolder = _app.GetServerDataDir();
 
             textBoxPort.Text = _initialPort;
-            textBoxDataFolder.Text = _initialDataFolder;            
+            textBoxDataFolder.Text = _initialDataFolder;
         }
 
         private void CancelClicked(object sender, EventArgs e)
         {
 
         }
+
 
         private void BrowseClicked(object sender, EventArgs e)
         {
@@ -78,9 +80,21 @@ namespace AudiobookshelfTray
                 portNumber = Int32.Parse(textBoxPort.Text);
 
                 // Ensure port number is within valid range
-                if (portNumber < 1 || portNumber > 65535)
+                if (portNumber < 2 || portNumber > 65535 ) //consider changing this to the conventional 1024-49152. Also ports 0 and 1 are reserved.
                 {
                     errorProviderPort.SetError(labelPort, "Invalid port number. Please enter a value between 1 and 65535.");
+                    return false;
+                }
+                string processName = GetProcessUsingPort(portNumber);
+                if ((IsPortFree(portNumber) == false | processName != "audiobookshelf") != true)
+                {
+                    // Port is in use, show error message
+                    errorProviderPort.SetError(labelPort, $"Port {portNumber} is already in use by {processName}.");
+                    return false;
+                }
+                else if (IsPortFree(portNumber) == false && processName == string.Empty) //edge case
+                {
+                    errorProviderPort.SetError(labelPort, $"Port {portNumber} is already in use by {processName}.");
                     return false;
                 }
             }
@@ -93,6 +107,47 @@ namespace AudiobookshelfTray
             return true;
         }
 
+       private string GetProcessUsingPort(int port)
+        {
+            Process process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c for /f \"skip=1 tokens=5\" %a in ('netstat -ano ^| findstr :\"{port}[^0-9]\"') do @for /f \"tokens=1\" %b in ('tasklist /FI \"PID eq %a\" ^| more ^| findstr /V \"Image\" ^| findstr /V \"=\"') do @echo %b",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+
+            return output;
+        }
+
+        bool IsPortFree(int port)
+        {
+            try
+            {
+                // Attempt to bind to the port on localhost (127.0.0.1)
+                var tcpListener = new TcpListener(System.Net.IPAddress.Loopback, port);
+                try
+                {
+                    tcpListener.Start();
+                    return true; // Port is free
+                }
+                finally
+                {
+                    tcpListener.Stop();
+                }
+            }
+            catch (SocketException)
+            {
+                return false; // Port is in use
+            }
+        }
         private void PortTextChanged(object sender, EventArgs e)
         {
             ValidatePort();
