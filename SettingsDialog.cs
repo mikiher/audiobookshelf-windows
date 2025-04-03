@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 using System.Diagnostics;
+using AudiobookshelfTray;
 namespace AudiobookshelfTray
 {
     public partial class SettingsDialog : Form
@@ -78,23 +79,25 @@ namespace AudiobookshelfTray
             try
             {
                 portNumber = Int32.Parse(textBoxPort.Text);
-
+                string processName = NetworkUtils.GetProcessNameUsingPortId(portNumber);
+                bool isFree = NetworkUtils.IsPortFree(portNumber);
+                string server_executable_name = _app.GetServerFileName();
                 // Ensure port number is within valid range
                 if (portNumber < 2 || portNumber > 65535 ) //consider changing this to the conventional 1024-49152. Also ports 0 and 1 are reserved.
                 {
                     errorProviderPort.SetError(labelPort, "Invalid port number. Please enter a value between 1 and 65535.");
                     return false;
                 }
-                string processName = GetProcessUsingPort(portNumber);
-                if ((IsPortFree(portNumber) == false | processName != "audiobookshelf") != true)
+
+                else if (!isFree && processName != server_executable_name)
                 {
                     // Port is in use, show error message
                     errorProviderPort.SetError(labelPort, $"Port {portNumber} is already in use by {processName}.");
                     return false;
                 }
-                else if (IsPortFree(portNumber) == false && processName == string.Empty) //edge case
+                else if (isFree == false && processName == string.Empty) //edge case
                 {
-                    errorProviderPort.SetError(labelPort, $"Port {portNumber} is already in use by {processName}.");
+                    errorProviderPort.SetError(labelPort, $"Port {portNumber} is already in use by unidentified process.");
                     return false;
                 }
             }
@@ -107,60 +110,18 @@ namespace AudiobookshelfTray
             return true;
         }
 
-       private string GetProcessUsingPort(int port)
-        {
-            Process process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c for /f \"skip=1 tokens=5\" %a in ('netstat -ano ^| findstr :\"{port}[^0-9]\"') do @for /f \"tokens=1\" %b in ('tasklist /FI \"PID eq %a\" ^| more ^| findstr /V \"Image\" ^| findstr /V \"=\"') do @echo %b",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-            string output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit();
-
-            return output;
-        }
-
-        bool IsPortFree(int port)
-        {
-            try
-            {
-                // Attempt to bind to the port on localhost (127.0.0.1)
-                var tcpListener = new TcpListener(System.Net.IPAddress.Loopback, port);
-                try
-                {
-                    tcpListener.Start();
-                    return true; // Port is free
-                }
-                finally
-                {
-                    tcpListener.Stop();
-                }
-            }
-            catch (SocketException)
-            {
-                return false; // Port is in use
-            }
-        }
         private void PortTextChanged(object sender, EventArgs e)
         {
             ValidatePort();
         }
-
-        private void DataFolderValidating(object sender, CancelEventArgs e)
+                private void DataFolderValidating(object sender, CancelEventArgs e)
         {
             if (!ValidateDataFolder())
                 e.Cancel = true;
         }
 
-        private bool ValidateDataFolder()
-        {
+                private bool ValidateDataFolder()
+                        {
             string datafolder = textBoxDataFolder.Text;
             if (!System.IO.Directory.Exists(datafolder))
             {
