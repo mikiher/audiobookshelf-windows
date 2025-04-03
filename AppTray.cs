@@ -128,10 +128,7 @@ namespace AudiobookshelfTray
                 _dailyTimer.Stop();
             }
         }
-        public string GetServerFileName()
-        {
-            return _serverFilename;
-        }
+
         public string GetServerDataDir()
         {
             string serverDataDir = GetRegistryValue("DataDir", "");
@@ -178,7 +175,7 @@ namespace AudiobookshelfTray
 
         private void SettingsClicked(object sender, EventArgs e)
         {
-            SettingsDialog settingsDialog = new(this, _serverFilename);
+            SettingsDialog settingsDialog = new(this);
             settingsDialog.ShowDialog();
         }
 
@@ -239,7 +236,7 @@ namespace AudiobookshelfTray
                     EnableRaisingEvents = true
                 };
                 installerProcess.Start();
-            }
+            }   
         }
 
         public void ExitClicked(object sender, EventArgs e)
@@ -260,14 +257,14 @@ namespace AudiobookshelfTray
 
         public void OpenClicked(object sender, EventArgs e)
         {
-            // Server already started,
+            // Server already started, 
             if (_serverProcess != null)
             {
                 // just open the browser.
                 OpenBrowser();
             }
 
-            // Server not started,
+            // Server not started, 
             else
             {
                 // ask master if we should start it.
@@ -491,7 +488,7 @@ namespace AudiobookshelfTray
                         _logger.Error("Failed to download installer");
                         MessageBox.Show("Failed to download installer", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                }
+                }                        
             }
             else
             {
@@ -500,7 +497,7 @@ namespace AudiobookshelfTray
                 {
                     MessageBox.Show("No updates available", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-
+                
             }
         }
 
@@ -561,7 +558,7 @@ namespace AudiobookshelfTray
                 SetRegistryValue("ServerPort", Settings.Default.ServerPort);
                 _logger.Debug("Setting registry value DataDir: " + Settings.Default.DataDir);
                 SetRegistryValue("ServerVersion", Settings.Default.ServerVersion);
-
+                
                 // Mark migration as complete
                 SetRegistryValue("SettingsMigrated", true);
                 _logger.Debug("Settings migration completed successfully");
