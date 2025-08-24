@@ -18,7 +18,7 @@ Audiobookshelf-windows releases are automatically kept up to date with the lates
 ## System Requirements
 - Windows 10 64-bit or later
 
-You **do not** need to install .NET Framework, as it is included in any Windows 10 installation.
+You **do not** need to install .NET Framework, as it is included in any Windows 10/11 installation.
 
 You **do not** need to install Node.js, as the server executable is pre-packaged with it.
 
