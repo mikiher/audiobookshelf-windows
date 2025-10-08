@@ -34,13 +34,18 @@ jobs:
         run: |
           $innoUrl = "https://jrsoftware.org/download.php/is.exe"
           $installer = "$env:TEMP\\is.exe"
-          Invoke-WebRequest -Uri $innoUrl -OutFile $installer
-          Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$env:ProgramFiles\\Inno Setup" -Wait
-          $env:Path = "$env:ProgramFiles\\Inno Setup;$env:Path"
+          $installDir = "${env:ProgramFiles(x86)}\Inno Setup 6"
+      
+          Invoke-WebRequest -Uri $innoUrl -OutFile $installer -ErrorAction Stop
+          Start-Process -FilePath $installer -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',("/DIR=""$installDir""") -Wait
+      
+          # Make ISCC available to all subsequent steps
+          "$installDir" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Add Inno Setup to PATH
+      - name: Verify ISCC
         shell: pwsh
-        run: echo "$env:ProgramFiles\Inno Setup" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        run: |
+          iscc
           
       # 1. Build the audiobookshelf executable
       - name: Get Latest Audiobookshelf Release Tag
