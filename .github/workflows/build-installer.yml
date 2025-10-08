@@ -29,6 +29,15 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v1
 
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $innoUrl = "https://jrsoftware.org/download.php/is.exe"
+          $installer = "$env:TEMP\\is.exe"
+          Invoke-WebRequest -Uri $innoUrl -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$env:ProgramFiles\\Inno Setup" -Wait
+          $env:Path = "$env:ProgramFiles\\Inno Setup;$env:Path"
+
       # 1. Build the audiobookshelf executable
       - name: Get Latest Audiobookshelf Release Tag
         id: get_latest_release
