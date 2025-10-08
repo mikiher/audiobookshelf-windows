@@ -38,6 +38,10 @@ jobs:
           Start-Process -FilePath $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$env:ProgramFiles\\Inno Setup" -Wait
           $env:Path = "$env:ProgramFiles\\Inno Setup;$env:Path"
 
+      - name: Add Inno Setup to PATH
+        shell: pwsh
+        run: echo "$env:ProgramFiles\Inno Setup" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          
       # 1. Build the audiobookshelf executable
       - name: Get Latest Audiobookshelf Release Tag
         id: get_latest_release
