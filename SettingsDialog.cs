@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 
@@ -9,6 +10,7 @@ namespace AudiobookshelfTray
         private readonly AppTray _app;
         private readonly string _initialPort;
         private readonly string _initialDataFolder;
+        private readonly string _initialEnvironment;
 
         public SettingsDialog(AppTray app)
         {
@@ -17,9 +19,11 @@ namespace AudiobookshelfTray
             _app = app;
             _initialPort = _app.GetServerPort();
             _initialDataFolder = _app.GetServerDataDir();
+            _initialEnvironment = _app.GetServerEnvironment();
 
             textBoxPort.Text = _initialPort;
-            textBoxDataFolder.Text = _initialDataFolder;            
+            textBoxDataFolder.Text = _initialDataFolder;
+            textBoxEnvironment.Text = _initialEnvironment;
         }
 
         private void CancelClicked(object sender, EventArgs e)
@@ -42,18 +46,28 @@ namespace AudiobookshelfTray
 
         private void SaveClicked(object sender, EventArgs e)
         {
-            if (ValidatePort() && ValidateDataFolder())
+            if (ValidatePort() && ValidateDataFolder() && ValidateEnvironment())
             {
-                if (textBoxDataFolder.Text != _initialDataFolder || textBoxPort.Text != _initialPort)
+                if (textBoxDataFolder.Text != _initialDataFolder ||
+                    textBoxPort.Text != _initialPort ||
+                    textBoxEnvironment.Text != _initialEnvironment)
                 {
                     _app.SaveServerPort(textBoxPort.Text);
                     _app.SaveServerDataDir(textBoxDataFolder.Text);
-                    DialogResult result = MessageBox.Show("Changing server settings requires a server restart. Do you want to restart it now?",
+                    _app.SaveServerEnvironment(textBoxEnvironment.Text);
+
+                    bool serverRunning = _app.IsServerRunning;
+                    string prompt = serverRunning
+                        ? "Changing server settings requires a server restart. Do you want to restart it now?"
+                        : "Do you want to start the server now?";
+                    DialogResult result = MessageBox.Show(prompt,
                         "Audiobookshelf", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (result == DialogResult.No)
-                        return;
-                    _app.StopServerClicked(sender, e);
-                    _app.StartServerClicked(sender, e);
+                    if (result == DialogResult.Yes)
+                    {
+                        if (serverRunning)
+                            _app.StopServerClicked(sender, e);
+                        _app.StartServerClicked(sender, e);
+                    }
                 }
                 this.Close();
             }
@@ -65,8 +79,7 @@ namespace AudiobookshelfTray
 
         private void PortValidating(object sender, CancelEventArgs e)
         {
-            if (!ValidatePort())
-                e.Cancel = true;
+            ValidatePort();
         }
 
         private bool ValidatePort()
@@ -100,8 +113,7 @@ namespace AudiobookshelfTray
 
         private void DataFolderValidating(object sender, CancelEventArgs e)
         {
-            if (!ValidateDataFolder())
-                e.Cancel = true;
+            ValidateDataFolder();
         }
 
         private bool ValidateDataFolder()
@@ -119,6 +131,28 @@ namespace AudiobookshelfTray
         private void DataFolderTextChanged(object sender, EventArgs e)
         {
             ValidateDataFolder();
+        }
+
+        private void EnvironmentValidating(object sender, CancelEventArgs e)
+        {
+            ValidateEnvironment();
+        }
+
+        private bool ValidateEnvironment()
+        {
+            if (!_app.TryValidateServerEnvironment(textBoxEnvironment.Text, out Dictionary<string, string> _, out string error))
+            {
+                errorProviderEnvironment.SetError(labelEnvironment, error);
+                return false;
+            }
+
+            errorProviderEnvironment.SetError(labelEnvironment, "");
+            return true;
+        }
+
+        private void EnvironmentTextChanged(object sender, EventArgs e)
+        {
+            ValidateEnvironment();
         }
     }
 }

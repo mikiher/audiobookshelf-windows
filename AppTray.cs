@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -46,6 +47,10 @@ namespace AudiobookshelfTray
         private DismissableMessageBox _newVersionAvailableDialog = null;
 
         private const string REGISTRY_KEY = @"HKEY_CURRENT_USER\Software\Audiobookshelf";
+        private const int MaxEnvironmentBlockSize = 32767;
+        private static readonly Regex EnvironmentVariableNameRegex = new(@"^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+        private static Dictionary<string, string> _parentEnvironment;
+        private static int _parentEnvironmentBlockSize;
 
         public AppTray()
         {            // First check if we need to upgrade settings from previous versio// Then migrate settings to registry
@@ -163,6 +168,8 @@ namespace AudiobookshelfTray
             SetRegistryValue("DataDir", serverDataDir);
         }
 
+        public bool IsServerRunning => _serverProcess != null;
+
         public string GetServerPort()
         {
             return GetRegistryValue("ServerPort", "13378");
@@ -173,6 +180,75 @@ namespace AudiobookshelfTray
             SetRegistryValue("ServerPort", serverPort);
         }
 
+        public string GetServerEnvironment()
+        {
+            return GetRegistryValue("Environment", "");
+        }
+
+        public void SaveServerEnvironment(string environment)
+        {
+            SetRegistryValue("Environment", environment ?? "");
+        }
+
+        public bool TryValidateServerEnvironment(string text, out Dictionary<string, string> variables, out string error)
+        {
+            if (!TryParseEnvironmentVariables(text, out variables, out error))
+                return false;
+
+            int environmentBlockSize = EstimateMergedEnvironmentBlockSize(variables);
+            if (environmentBlockSize > MaxEnvironmentBlockSize)
+            {
+                error = $"The combined environment variables are {environmentBlockSize} characters, which exceeds the Windows limit of {MaxEnvironmentBlockSize}.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool TryParseEnvironmentVariables(string text, out Dictionary<string, string> variables, out string error)
+        {
+            variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            error = null;
+
+            if (string.IsNullOrWhiteSpace(text))
+                return true;
+
+            string[] lines = text.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                string trimmedStart = line.TrimStart();
+                if (trimmedStart.Length == 0 || trimmedStart[0] == '#')
+                    continue;
+
+                int eq = line.IndexOf('=');
+                string name = eq > 0 ? line.Substring(0, eq).Trim() : "";
+                if (name.Length == 0)
+                {
+                    error = $"Line {i + 1}: expected NAME=VALUE.";
+                    return false;
+                }
+
+                string value = line.Substring(eq + 1);
+
+                if (!EnvironmentVariableNameRegex.IsMatch(name))
+                {
+                    error = $"Line {i + 1}: invalid environment variable name '{name}'.";
+                    return false;
+                }
+
+                if (variables.ContainsKey(name))
+                {
+                    error = $"Line {i + 1}: environment variable '{name}' is already set.";
+                    return false;
+                }
+
+                variables[name] = value;
+            }
+
+            return true;
+        }
+
         private void SettingsClicked(object sender, EventArgs e)
         {
             SettingsDialog settingsDialog = new(this);
@@ -181,8 +257,8 @@ namespace AudiobookshelfTray
 
         private void Init()
         {
-            // Start server
-            if (!StartServer())
+            // A bad environment is corrected from Settings. Other start failures still close the tray.
+            if (StartServer() == ServerStartResult.NotStarted)
                 _shouldExit = true;
 
             _openServerMenuItem.Enabled = true;
@@ -299,12 +375,19 @@ namespace AudiobookshelfTray
             }
         }
 
-        private bool StartServer()
+        private enum ServerStartResult
+        {
+            Started,
+            NotStarted,
+            InvalidEnvironment
+        }
+
+        private ServerStartResult StartServer()
         {
             if (_serverProcess != null)
             {
                 _logger.Debug("Server already started");
-                return false;
+                return ServerStartResult.NotStarted;
             }
 
             string serverBinDir = System.Windows.Forms.Application.StartupPath;
@@ -317,12 +400,23 @@ namespace AudiobookshelfTray
             {
                 _logger.Error("Server binary not found at " + serverBinPath);
                 MessageBox.Show("Server binary not found at " + serverBinPath, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                return ServerStartResult.NotStarted;
             }
 
             string serverDataDir = GetServerDataDir();
             if (serverDataDir == null)
-                return false;
+                return ServerStartResult.NotStarted;
+
+            if (!TryValidateServerEnvironment(GetServerEnvironment(), out Dictionary<string, string> environmentVariables, out string environmentError))
+            {
+                _logger.Error("Invalid server environment settings: " + environmentError);
+                MessageBox.Show(
+                    environmentError + "\n\nThe server was not started. Open Settings to correct the environment variables.",
+                    "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _startServerMenuItem.Enabled = true;
+                _stopServerMenuItem.Enabled = false;
+                return ServerStartResult.InvalidEnvironment;
+            }
 
             string configPath = Path.Combine(serverDataDir, "config");
             string metadataPath = Path.Combine(serverDataDir, "metadata");
@@ -347,6 +441,17 @@ namespace AudiobookshelfTray
                 EnableRaisingEvents = true
             };
 
+            foreach (KeyValuePair<string, string> variable in environmentVariables)
+            {
+                _serverProcess.StartInfo.Environment[variable.Key] = variable.Value;
+            }
+
+            if (environmentVariables.Count > 0)
+            {
+                _logger.Info("Applying server environment variables: " +
+                    string.Join(", ", environmentVariables.Keys));
+            }
+
             _serverProcess.OutputDataReceived += HandleServerOutput;
             _serverProcess.ErrorDataReceived += HandleServerOutput;
             _serverProcess.Exited += ServerExited;
@@ -365,7 +470,7 @@ namespace AudiobookshelfTray
             _startServerMenuItem.Enabled = false;
             _stopServerMenuItem.Enabled = true;
 
-            return true;
+            return ServerStartResult.Started;
         }
 
         private void ServerExited(object sender, EventArgs e)
@@ -625,8 +730,58 @@ namespace AudiobookshelfTray
             }
             catch (Exception ex)
             {
-                _logger.Error($"Failed to set registry value {name} to {value}: {ex}");
+                if (name == "Environment")
+                    _logger.Error($"Failed to set registry value {name}: {ex}");
+                else
+                    _logger.Error($"Failed to set registry value {name} to {value}: {ex}");
             }
         }
+
+        private static int EstimateMergedEnvironmentBlockSize(Dictionary<string, string> variables)
+        {
+            EnsureParentEnvironmentSnapshot();
+
+            int size = _parentEnvironmentBlockSize;
+            foreach (KeyValuePair<string, string> variable in variables)
+            {
+                string value = variable.Value ?? "";
+                if (_parentEnvironment.TryGetValue(variable.Key, out string existingValue))
+                    size += value.Length - (existingValue?.Length ?? 0);
+                else
+                    size += variable.Key.Length + 1 + value.Length + 1;
+            }
+            return size;
+        }
+
+        private static void EnsureParentEnvironmentSnapshot()
+        {
+            if (_parentEnvironment != null)
+                return;
+
+            ProcessStartInfo startInfo = new()
+            {
+                UseShellExecute = false
+            };
+
+            Dictionary<string, string> parentEnvironment = new(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string> entry in startInfo.Environment)
+                parentEnvironment[entry.Key] = entry.Value ?? "";
+
+            _parentEnvironmentBlockSize = EstimateEnvironmentBlockSize(parentEnvironment);
+            _parentEnvironment = parentEnvironment;
+        }
+
+        private static int EstimateEnvironmentBlockSize(IDictionary<string, string> environmentVariables)
+        {
+            int size = 1; // final null terminator
+            foreach (KeyValuePair<string, string> entry in environmentVariables)
+            {
+                string name = entry.Key ?? "";
+                string value = entry.Value ?? "";
+                size += name.Length + 1 + value.Length + 1; // NAME=VALUE\0
+            }
+            return size;
+        }
+
     }
 }
