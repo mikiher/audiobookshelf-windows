@@ -13,6 +13,7 @@ The tray app lets you:
 - Set the server to start on login
 - View the server logs
 - Change the server port and data folder
+- Set server environment variables
 - Check for updates, download and install them
 
 Audiobookshelf-windows releases are automatically kept up to date with the latest audiobookshelf server releases.
