@@ -45,6 +45,7 @@ namespace AudiobookshelfTray
         private readonly List<string> _serverLogsList = [];
 
         private DismissableMessageBox _newVersionAvailableDialog = null;
+        private bool _updateCheckFailureNotified = false;
 
         private const string REGISTRY_KEY = @"HKEY_CURRENT_USER\Software\Audiobookshelf";
         private const int MaxEnvironmentBlockSize = 32767;
@@ -546,91 +547,142 @@ namespace AudiobookshelfTray
 
         private async void CheckForUpdates(object sender, EventArgs e)
         {
-            // Find latest release on GitHub
-            GitHubClient client = new(new ProductHeaderValue(_trayAppName));
-            IReadOnlyList<Release> releases = await client.Repository.Release.GetAll(_repoOwner, _repoName);
-            Release latestRelease = releases[0];
-            _logger.Debug("Latest release: " + latestRelease.TagName);
-            _logger.Debug("Current release: " + _appVersion);
-
-            if(_newVersionAvailableDialog != null)
+            try
             {
-                _newVersionAvailableDialog.Dismiss();
-            }
-
-            if (latestRelease.TagName != _appVersion)
-            {
-                // Find installer asset
-                ReleaseAsset exeAsset = latestRelease.Assets.First(asset => asset.Name.EndsWith(".exe"));
-                if (exeAsset == null)
+                // Find latest release on GitHub
+                GitHubClient client = new(new ProductHeaderValue(_trayAppName));
+                IReadOnlyList<Release> releases = await client.Repository.Release.GetAll(_repoOwner, _repoName);
+                if (releases == null || releases.Count == 0)
                 {
-                    _logger.Error("No exe asset found");
-                    MessageBox.Show("Failed to find installer for the latest release.", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    _logger.Error("No releases found");
+                    NotifyUpdateCheckFailed(sender, "Could not check for updates.");
                     return;
                 }
 
-                // Ask user if they want to download and install the new version
-                _newVersionAvailableDialog = new DismissableMessageBox("Audiobookshelf Update");
-                DialogResult result = _newVersionAvailableDialog.Show("A New version " + latestRelease.TagName + " is available.\nDownload and install it?", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                _newVersionAvailableDialog = null;
-                if (result == DialogResult.Yes)
+                _updateCheckFailureNotified = false;
+
+                Release latestRelease = releases[0];
+                _logger.Debug("Latest release: " + latestRelease.TagName);
+                _logger.Debug("Current release: " + _appVersion);
+
+                if (_newVersionAvailableDialog != null)
                 {
-                    // Download the new installer to a temp directory and run it
-                    string tempDir = Path.Combine(Path.GetTempPath(), "Audiobookshelf");
-                    if (!Directory.Exists(tempDir))
-                    {
-                        Directory.CreateDirectory(tempDir);
-                    }
-                    _installerPath = Path.Combine(tempDir, exeAsset.Name);
-                    if (await DownloadInstaller(exeAsset.BrowserDownloadUrl))
-                    {
-                        MessageBox.Show("About to install new version. Audiobookshelf will exit now.", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        _runInstall = true;
-                        ExitClicked(sender, e);
-                    }
-                    else
-                    {
-                        _logger.Error("Failed to download installer");
-                        MessageBox.Show("Failed to download installer", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }                        
-            }
-            else
-            {
-                // silent if called from timer or autoCheckForUpdates checkbox
-                if (sender == _checkForUpdatesMenuItem)
-                {
-                    MessageBox.Show("No updates available", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    _newVersionAvailableDialog.Dismiss();
                 }
-                
+
+                if (latestRelease.TagName != _appVersion)
+                {
+                    // Find installer asset
+                    ReleaseAsset exeAsset = latestRelease.Assets?.FirstOrDefault(asset => asset.Name.EndsWith(".exe"));
+                    if (exeAsset == null)
+                    {
+                        _logger.Error("No exe asset found");
+                        MessageBox.Show("Failed to find installer for the latest release.", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    // Ask user if they want to download and install the new version
+                    _newVersionAvailableDialog = new DismissableMessageBox("Audiobookshelf Update");
+                    DialogResult result = _newVersionAvailableDialog.Show("A New version " + latestRelease.TagName + " is available.\nDownload and install it?", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                    _newVersionAvailableDialog = null;
+                    if (result == DialogResult.Yes)
+                    {
+                        // Download the new installer to a temp directory and run it
+                        string tempDir = Path.Combine(Path.GetTempPath(), "Audiobookshelf");
+                        if (!Directory.Exists(tempDir))
+                        {
+                            Directory.CreateDirectory(tempDir);
+                        }
+                        _installerPath = Path.Combine(tempDir, exeAsset.Name);
+                        if (await DownloadInstaller(exeAsset.BrowserDownloadUrl))
+                        {
+                            MessageBox.Show("About to install new version. Audiobookshelf will exit now.", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            _runInstall = true;
+                            ExitClicked(sender, e);
+                        }
+                        else
+                        {
+                            _logger.Error("Failed to download installer");
+                            MessageBox.Show("Failed to download installer", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+                else
+                {
+                    // silent if called from timer or autoCheckForUpdates checkbox
+                    if (sender == _checkForUpdatesMenuItem)
+                    {
+                        MessageBox.Show("No updates available", "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
             }
+            catch (RateLimitExceededException ex)
+            {
+                _logger.Warn("GitHub rate limit exceeded while checking for updates: " + ex);
+                NotifyUpdateCheckFailed(sender, "Could not check for updates because GitHub's rate limit was reached.");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Failed to check for updates: " + ex);
+                NotifyUpdateCheckFailed(sender, "Could not check for updates.");
+            }
+        }
+
+        private void NotifyUpdateCheckFailed(object sender, string message)
+        {
+            if (sender == _checkForUpdatesMenuItem)
+            {
+                MessageBox.Show(message, "Audiobookshelf", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (_updateCheckFailureNotified)
+                return;
+
+            _updateCheckFailureNotified = true;
+            ShowUpdateCheckBalloon(message);
+        }
+
+        private void ShowUpdateCheckBalloon(string message)
+        {
+            if (_trayIcon == null)
+                return;
+
+            ContextMenuStrip menu = _trayIcon.ContextMenuStrip;
+            if (menu != null && menu.IsHandleCreated && menu.InvokeRequired)
+            {
+                menu.Invoke(new MethodInvoker(delegate
+                {
+                    ShowUpdateCheckBalloon(message);
+                }));
+                return;
+            }
+
+            _trayIcon.ShowBalloonTip(500, "Audiobookshelf", message, ToolTipIcon.Warning);
         }
 
         private async Task<bool> DownloadInstaller(string downloadUrl)
         {
             _logger.Debug("Downloading installer to " + _installerPath);
-            System.Net.Http.HttpClient httpClient = new();
-            System.Net.Http.HttpResponseMessage response = await httpClient.GetAsync(downloadUrl);
-            if (response.IsSuccessStatusCode)
+            try
             {
-                try
+                using System.Net.Http.HttpClient httpClient = new();
+                using System.Net.Http.HttpResponseMessage response = await httpClient.GetAsync(downloadUrl);
+                if (!response.IsSuccessStatusCode)
                 {
-                    using Stream stream = await response.Content.ReadAsStreamAsync();
-                    using FileStream fileStream = new(_installerPath, System.IO.FileMode.Create, FileAccess.Write);
-                    await stream.CopyToAsync(fileStream);
-                    _logger.Debug("Downloaded installer to " + _installerPath);
-                    fileStream.Close();
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error("Failed to download installer: " + ex.ToString());
+                    _logger.Error("Failed to download installer: " + response.StatusCode);
                     return false;
                 }
+
+                using Stream stream = await response.Content.ReadAsStreamAsync();
+                using FileStream fileStream = new(_installerPath, System.IO.FileMode.Create, FileAccess.Write);
+                await stream.CopyToAsync(fileStream);
+                _logger.Debug("Downloaded installer to " + _installerPath);
+                return true;
             }
-            else
+            catch (Exception ex)
             {
-                _logger.Error("Failed to download installer: " + response.StatusCode);
+                _logger.Error("Failed to download installer: " + ex.ToString());
                 return false;
             }
         }
